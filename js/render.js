@@ -123,9 +123,14 @@ var Gate = Gate || {};
   }
 
   /** Big cards (few cells on screen): the parts this shift, schedule first. */
+  // Parts without a standard are counted in the red note, not listed, so a long list of
+  // them can't push the card off the screen; the rest are cut at what fits, with "+N more".
+  const BIG_CARD_PARTS = 5;
   function partsList(block, view) {
-    const parts = block ? block.parts.slice(0, 8) : [];
-    if (!parts.length) return "";
+    const all = block ? block.parts.filter((p) => p.std > 0 && p.crew > 0) : [];
+    if (!all.length) return "";
+    const parts = all.slice(0, BIG_CARD_PARTS);
+    const more = all.length - parts.length;
     const fraction = view.shift.running ? view.shift.fraction : 1;
     const rows = parts.map((p) => {
       const ok = p.std > 0 && p.crew > 0;
@@ -135,7 +140,7 @@ var Gate = Gate || {};
         <span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
         <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
     }).join("");
-    return `<div class="plist"><div class="pl-h"><span>PARTS THIS SHIFT</span><span>ACTUAL / FORECAST</span></div>${rows}</div>`;
+    return `<div class="plist"><div class="pl-h"><span>PARTS THIS SHIFT</span><span>ACTUAL / FORECAST</span></div>${rows}${more > 0 ? `<div class="pl-more">+${more} more part${more > 1 ? "s" : ""}</div>` : ""}</div>`;
   }
 
   G.renderPlant = function (view, now, opts) {
@@ -201,7 +206,11 @@ var Gate = Gate || {};
     const b = m ? band(m.eff) : "none";
     const sb = m ? band(m.schedPace) : "none";
     const fraction = view.shift.running ? view.shift.fraction : 1;
-    const parts = t.block ? t.block.parts : [];
+    // About 11 rows fit; the rest are summed up as "+N more parts".
+    const CELL_ROWS = m && m.noStd.length ? 10 : 11;
+    const allParts = t.block ? t.block.parts : [];
+    const parts = allParts.slice(0, CELL_ROWS);
+    const moreParts = allParts.length - parts.length;
     let lineDone = false;
     const rows = parts.map((p) => {
       let pre = "";
@@ -217,7 +226,8 @@ var Gate = Gate || {};
       <span class="pst t-${done === null ? (ok ? "none" : "off") : pb}">${done === null ? (ok ? "EXTRA" : "CHECK") : Math.round(done * 100) + "%"}</span></div>`;
     }).join("");
     const hist = t.history.map((h) => `<div class="hcol"><span class="t-${band(h.eff)}">${h.eff}%</span><i class="bg-${band(h.eff)}${h.now ? " stripes" : ""}" style="height:${Math.round(Math.min(h.eff, 115) * 1.05)}px;opacity:${h.now ? 1 : 0.75}"></i><em>${h.now ? "NOW" : esc(h.day + " " + h.shift)}</em></div>`).join("");
-    const flag = m && m.noStd.length ? `<div class="note n-red wide"><b>${m.noStd.length} PART${m.noStd.length > 1 ? "S" : ""} WITH NO ${esc(t.rg)} STANDARD IN EPICOR</b><span>${esc(m.noStd.join(", "))} · not counted in the goal: add ${m.noStd.length > 1 ? "them" : "it"} in Epicor</span></div>` : "";
+    const listed = m ? m.noStd.slice(0, 4).join(", ") + (m.noStd.length > 4 ? " and " + (m.noStd.length - 4) + " more" : "") : "";
+    const flag = m && m.noStd.length ? `<div class="note n-red wide"><b>${m.noStd.length} PART${m.noStd.length > 1 ? "S" : ""} WITH NO ${esc(t.rg)} STANDARD IN EPICOR</b><span>${esc(listed)} · not counted in the goal: add ${m.noStd.length > 1 ? "them" : "it"} in Epicor</span></div>` : "";
     const uplhPct = m && has(m.uplh) && m.goal ? Math.min(100, m.uplh / m.goal * 100) : 0;
     const hoursPlan = t.block && t.block.hours ? t.block.hours : PLANT.shifts[view.shift.shift].hours;
     return `<div class="screen">${header(view, now, { top: t.name.toUpperCase() + (t.rg ? " · " + t.rg : ""), bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, Object.assign({ shiftInHeader: true }, opts))}
@@ -244,7 +254,7 @@ var Gate = Gate || {};
     <section class="cright">
       <div class="card parts"><div class="ph">PARTS THIS SHIFT</div>
         <div class="phead"><span>PART #</span><span>DESCRIPTION (EPICOR)</span><span>FORECAST</span><span>ACTUAL</span><span>PROGRESS</span><span>STD /HR</span><span>CREW</span><span>STATUS</span></div>
-        ${rows || '<div class="muted pad">Nothing entered for this shift yet.</div>'}<div class="grow"></div>${flag}</div>
+        ${rows || '<div class="muted pad">Nothing entered for this shift yet.</div>'}${moreParts > 0 ? `<div class="pl-more">+${moreParts} more part${moreParts > 1 ? "s" : ""} in the workbook</div>` : ""}<div class="grow"></div>${flag}</div>
       <div class="card hist"><div class="hh"><b>LAST SHIFTS · TO GOAL</b><span>From this week's and last week's tabs</span></div><div class="hcols">${hist}</div></div>
     </section>
   </main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;

@@ -78,8 +78,29 @@ try {
     await page.goto(base + "/?preview=1&cell=AWL1");
     await page.waitForSelector(".cleft");
     assert.match(await page.textContent(".hdr"), /AWL1/, "a cell not on the plant screen still opens on its own");
+    // A long list: 8 parts with a standard and 6 without. The card counts the ones without
+    // and cuts the list; the cell screen caps its table.
+    const many = JSON.parse(JSON.stringify(cell));
+    const blk = many.weeks["2026-11-09"]["0-1st"];
+    blk.parts = Array.from({ length: 14 }, (_, i) => ({ part: "P" + (100 + i), desc: "", forecast: 50, actual: 20, std: i < 8 ? 40 : 0, crew: i < 8 ? 1 : 0, sched: true }));
+    await post({ data: { cells: { TK1: many }, showCells: ["TK1", "TK2"] } });
+    await page.goto(base + "/?tv=1");
+    await page.waitForSelector(".plist");
+    assert.equal(await page.locator(".tiles .card").first().locator(".pl-row").count(), 5, "big card lists 5 parts");
+    assert.match(await page.textContent(".plist"), /\+3 more parts/);
+    assert.match(await page.textContent(".tiles .card"), /6 PARTS · NO STANDARD/, "parts without a standard are counted, not listed");
+    const cardBox = await page.locator(".tiles .card").first().boundingBox();
+    assert.ok(cardBox.y + cardBox.height <= 1080, "the card stays on the screen");
+    await page.goto(base + "/?tv=1&cell=TK1");
+    await page.waitForSelector(".prow");
+    assert.equal(await page.locator(".prow").count(), 10, "cell screen table capped");
+    assert.match(await page.textContent(".parts"), /\+4 more parts in the workbook/);
+    assert.match(await page.textContent(".parts"), /6 PARTS WITH NO LRC2 STANDARD[\s\S]*and 2 more/);
     await page.goto(base + "/");
     await page.waitForSelector("#bar:not([hidden])");
+    const bar = await page.locator("#bar").boundingBox();
+    const scr = await page.locator(".screen").boundingBox();
+    assert.ok(scr.y + scr.height <= bar.y + 1, "source PC: the bar is under the screen, not over it");
     assert.match(await page.textContent(".waiting"), /CONNECT THE PRODUCTION REPORTING FOLDER/, "source PC on Vercel");
     assert.deepEqual(errors, []);
   } finally {

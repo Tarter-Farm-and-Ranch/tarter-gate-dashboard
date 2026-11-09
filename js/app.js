@@ -47,7 +47,10 @@
     if (d && d.textContent !== c.date) d.textContent = c.date;
   }
   function fit() {
-    const s = Number(params.get("scale")) || Math.min(innerWidth / 1920, innerHeight / 1080);
+    // The source PC's bar sits under the screen, not over it (like West's).
+    const bar = $("bar");
+    const barH = bar && !bar.hidden ? bar.offsetHeight : 0;
+    const s = Number(params.get("scale")) || Math.min(innerWidth / 1920, (innerHeight - barH) / 1080);
     const screen = document.querySelector(".screen");
     if (screen) screen.style.transform = "scale(" + s + ")";
   }
@@ -312,6 +315,7 @@
     document.body.classList.add("mode-" + MODE);
     if (MODE === "source") {
       $("bar").hidden = false;
+      fit();
       // Only the source PC reads Excel files, so only it downloads the Excel reader.
       await loadScript("vendor/xlsx.js");
       $("connect").addEventListener("click", connect);
