@@ -298,6 +298,25 @@
     paintStatus();
   }
 
+  async function pageText() {
+    const res = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    let text = await res.text();
+    // The page's own scripts count too: a change to js/*.js is a new version.
+    for (const m of text.matchAll(/<script src="([^"]+)"/g)) {
+      const r = await fetch(m[1] + (m[1].indexOf("?") < 0 ? "?" : "&") + "v=" + Date.now(), { cache: "no-store" });
+      if (r.ok) text += await r.text();
+    }
+    return text;
+  }
+  async function watchForNewVersion() {
+    let first;
+    try { first = await pageText(); } catch (err) { return; }
+    setInterval(async () => {
+      try { if ((await pageText()) !== first) location.reload(); } catch (err) {}
+    }, 5 * 60e3);
+  }
+
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       const s = document.createElement("script");
@@ -347,6 +366,10 @@
     setInterval(draw, 30e3); // shift time left and pace move even when nothing new arrives
     setInterval(tickClock, 1e3);
     setTimeout(() => location.reload(), 24 * 3600e3); // a fresh page once a day
+    // TVs pick up a new version of the dashboard by themselves: every 5 minutes the page
+    // compares itself with the server's copy and reloads when it changed. Not on the
+    // source PC, where a reload would ask for the folder permission again.
+    if (MODE === "tv" || MODE === "portal") watchForNewVersion();
   }
 
   start();
