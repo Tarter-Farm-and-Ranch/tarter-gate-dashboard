@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tarter Gate Production Dashboard</title>
+<link rel="stylesheet" href="/styles.css">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<div id="bar" class="srcbar" hidden>
+  <button id="connect" type="button">CONNECT FOLDER</button>
+  <span id="status">Choose the Production Reporting folder (synced with OneDrive) to start.</span>
+  <span id="keyRow" hidden>
+    <label for="key">Publish key</label>
+    <input id="key" type="password" autocomplete="off">
+    <button id="saveKey" type="button">SAVE</button>
+  </span>
+  <a href="/tv" target="_blank" rel="noopener">TV link</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/tv", "destination": "/index.html?tv=1" },
+    { "source": "/tv/:cell", "destination": "/index.html?tv=1&cell=:cell" },
+    { "source": "/preview", "destination": "/index.html?preview=1" },
+    { "source": "/preview/:cell", "destination": "/index.html?preview=1&cell=:cell" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" }
+      ]
+    }
+  ],
+  "functions": { "api/*.js": { "maxDuration": 10 } }
+}
