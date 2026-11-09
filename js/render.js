@@ -82,9 +82,11 @@ var Gate = Gate || {};
     return kpi(h ? `${h}h ${m}m` : `${m}m`, "SHIFT LEFT", sub, "kpi-dark");
   }
 
-  function tile(t, view, big) {
+  // size: "big" (4 cells or fewer), "mid" (5-7 cells, one row) or "" (two rows).
+  function tile(t, view, size) {
     const m = t.m;
-    const rs = big ? 130 : 66;
+    const big = size === "big", mid = size === "mid";
+    const rs = big ? 130 : mid ? 96 : 66;
     if (!t.hasFile || !m) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -102,22 +104,22 @@ var Gate = Gate || {};
     const extra = m.made - m.schedMade;
     return `<div class="card tb-${b}">
     <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
-    <div class="c-meta"><span class="pill">${PERSON}${int(m.ops)}</span><span class="c-rg">${esc(t.rg)}</span>${big ? saved(t, view.now) : ""}<span class="grow"></span>${SHORT_CHIP[b] ? `<span class="chip ch-${b}">${SHORT_CHIP[b]}</span>` : ""}</div>
+    <div class="c-meta"><span class="pill">${PERSON}${int(m.ops)}</span>${mid ? "" : `<span class="c-rg">${esc(t.rg)}</span>`}${big || mid ? saved(t, view.now) : ""}<span class="grow"></span>${SHORT_CHIP[b] ? `<span class="chip ch-${b}">${mid ? SHORT_CHIP[b].split(" ")[0] : SHORT_CHIP[b]}</span>` : ""}</div>
     <div class="hero h-${b}">
       <div class="h-l">UPLH THIS SHIFT</div>
       <div class="h-v"><b>${fix1(m.uplh)}</b><span>/ ${fix1(m.goal)} <em>GOAL</em></span></div>
       <div class="track"><i class="bg-${b === "none" ? "none" : b} stripes" style="width:${uplhPct.toFixed(0)}%"></i></div>
     </div>
     <div class="rings">
-      <div class="rc">${ring(m.eff, rs, COLOR[b])}<div class="rl">TO<br>GOAL</div></div>
+      <div class="rc">${ring(m.eff, rs, COLOR[b])}<div class="rl">TO${mid ? " " : "<br>"}GOAL</div></div>
       <div class="rdiv"></div>
-      <div class="rc">${ring(m.adherence, rs, COLOR[sb])}<div class="rl">SCHED.<br>DONE</div></div>
+      <div class="rc">${ring(m.adherence, rs, COLOR[sb])}<div class="rl">SCHED.${mid ? " " : "<br>"}DONE</div></div>
     </div>
     <div class="duo"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div></div>
     ${notes.length ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
-    ${big ? partsList(t.block, view) : ""}
+    ${big || mid ? partsList(t.block, view, mid) : ""}
     <div class="grow"></div>
-    ${notes.slice(0, big ? 2 : 1).join("")}
+    ${notes.slice(0, big || mid ? 2 : 1).join("")}
     <div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>
   </div>`;
   }
@@ -126,21 +128,26 @@ var Gate = Gate || {};
   // Parts without a standard are counted in the red note, not listed, so a long list of
   // them can't push the card off the screen; the rest are cut at what fits, with "+N more".
   const BIG_CARD_PARTS = 5;
-  function partsList(block, view) {
+  const MID_CARD_PARTS = 6;
+  function partsList(block, view, compact) {
     const all = block ? block.parts.filter((p) => p.std > 0 && p.crew > 0) : [];
     if (!all.length) return "";
-    const parts = all.slice(0, BIG_CARD_PARTS);
+    const parts = all.slice(0, compact ? MID_CARD_PARTS : BIG_CARD_PARTS);
     const more = all.length - parts.length;
     const fraction = view.shift.running ? view.shift.fraction : 1;
     const rows = parts.map((p) => {
       const ok = p.std > 0 && p.crew > 0;
       const done = p.forecast ? (p.actual || 0) / p.forecast : null;
       const pb = done === null ? "none" : band(fraction ? Math.round(done / fraction * 100) : 0);
+      if (compact) {
+        return `<div class="pl-row pl-c"><span class="pl-n">${esc(p.part)}</span><span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
+        <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
+      }
       return `<div class="pl-row ${ok ? "" : "pl-red"}"><span class="pl-n">${esc(p.part)}</span><span class="pl-d">${esc(p.desc || (ok ? "" : "No standard in Epicor"))}</span>
         <span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
         <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
     }).join("");
-    return `<div class="plist"><div class="pl-h"><span>PARTS · ${esc(view.shift.label)}${view.shift.running ? "" : " (ENDED)"}</span><span>ACTUAL / FORECAST</span></div>${rows}${more > 0 ? `<div class="pl-more">+${more} more part${more > 1 ? "s" : ""}</div>` : ""}</div>`;
+    return `<div class="plist"><div class="pl-h"><span>PARTS · ${esc(view.shift.label)}${view.shift.running ? "" : " (ENDED)"}</span>${compact ? "" : "<span>ACTUAL / FORECAST</span>"}</div>${rows}${more > 0 ? `<div class="pl-more">+${more} more part${more > 1 ? "s" : ""}</div>` : ""}</div>`;
   }
 
   G.renderPlant = function (view, now, opts) {
@@ -148,8 +155,10 @@ var Gate = Gate || {};
     const p = view.plant;
     const shownAreas = view.shownAreas || G.shownAreas();
     const shownCount = shownAreas.reduce((n, a) => n + a.cells.length, 0);
-    // A few cells (the rollout starts with TK1 and TK2): one row of big cards.
+    // 4 cells or fewer (the rollout starts with TK1 and TK2): one row of big cards;
+    // 5 to 7: one row of medium cards; more: rows of 7 small cards.
     const few = shownCount <= 4;
+    const mid = !few && shownCount <= 7;
     const rows = [];
     let row = [], used = 0;
     for (const area of shownAreas) {
@@ -170,16 +179,17 @@ var Gate = Gate || {};
       const vals = view.tiles.filter((t) => cells.indexOf(t.name) >= 0 && t.m && has(t.m.eff)).map((t) => Math.min(t.m.eff, 150));
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
     };
-    const fewHtml = () => {
-      const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr)) 320px`;
-      const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("") + "<div></div>";
-      const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, true)).join("") + legend;
-      return `<section class="arow few"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
+    const oneRow = (size) => {
+      const withLegend = shownCount < 7;
+      const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr))${withLegend ? (size === "big" ? " 320px" : " 280px") : ""}`;
+      const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("") + (withLegend ? "<div></div>" : "");
+      const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, size)).join("") + (withLegend ? legend : "");
+      return `<section class="arow ${size === "big" ? "few" : "mid"}"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
     };
-    const rowsHtml = few ? fewHtml() : rows.map((areas, i) => {
+    const rowsHtml = few ? oneRow("big") : mid ? oneRow("mid") : rows.map((areas, i) => {
       const count = areas.reduce((n, a) => n + a.cells.length, 0);
       const fill = i === rows.length - 1 && count < 7;
-      const bands = areas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cells · ${areaAvg(a.cells)}</span></div>`).join("")
+      const bands = areas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("")
         + (fill ? `<div style="grid-column:span ${7 - count}"></div>` : "");
       const tiles = areas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view)).join("") + (fill ? legend : "");
       return `<section class="arow"><div class="bands">${bands}</div><div class="tiles">${tiles}</div></section>`;
