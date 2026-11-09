@@ -159,13 +159,6 @@ var Gate = Gate || {};
     // 5 to 7: one row of medium cards; more: rows of 7 small cards.
     const few = shownCount <= 4;
     const mid = !few && shownCount <= 7;
-    const rows = [];
-    let row = [], used = 0;
-    for (const area of shownAreas) {
-      if (used + area.cells.length > 7) { rows.push(row); row = []; used = 0; }
-      row.push(area); used += area.cells.length;
-    }
-    rows.push(row);
     const legend = `<div class="card legend">
       <div class="lg-h">HOW IT'S MEASURED</div>
       <div class="lg-t"><b>TO GOAL</b> = standard hours earned by every part made ÷ operators × hours worked.</div>
@@ -186,14 +179,32 @@ var Gate = Gate || {};
       const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, size)).join("") + (withLegend ? legend : "");
       return `<section class="arow ${size === "big" ? "few" : "mid"}"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
     };
-    const rowsHtml = few ? oneRow("big") : mid ? oneRow("mid") : rows.map((areas, i) => {
-      const count = areas.reduce((n, a) => n + a.cells.length, 0);
-      const fill = i === rows.length - 1 && count < 7;
-      const bands = areas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("")
-        + (fill ? `<div style="grid-column:span ${7 - count}"></div>` : "");
-      const tiles = areas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view)).join("") + (fill ? legend : "");
-      return `<section class="arow"><div class="bands">${bands}</div><div class="tiles">${tiles}</div></section>`;
-    }).join("");
+    // 8 cells or more: two rows, the cells split evenly (10 -> 5 + 5, 13 -> 7 + 6), so no
+    // row ends with holes. An area that runs across both rows gets its band in each.
+    const twoRows = () => {
+      const order = shownAreas.reduce((all, a) => all.concat(a.cells.map((c) => ({ cell: c, area: a.name }))), []);
+      const cols = Math.ceil(order.length / 2);
+      const shown = {};
+      return [order.slice(0, cols), order.slice(cols)].map((row) => {
+        const runs = [];
+        for (const it of row) {
+          const last = runs[runs.length - 1];
+          if (last && last.area === it.area) last.cells.push(it.cell);
+          else runs.push({ area: it.area, cells: [it.cell] });
+        }
+        const gap = cols - row.length;
+        const bands = runs.map((r) => {
+          const all = shownAreas.find((a) => a.name === r.area).cells;
+          const label = shown[r.area] ? "" : `<span>${all.length} cell${all.length > 1 ? "s" : ""} · ${areaAvg(all)}</span>`;
+          shown[r.area] = true;
+          return `<div class="band" style="grid-column:span ${r.cells.length}"><b>${esc(r.area)}</b>${label}</div>`;
+        }).join("") + (gap ? `<div style="grid-column:span ${gap}"></div>` : "");
+        const tiles = row.map((it) => tile(view.tiles.find((t) => t.name === it.cell), view)).join("") + (gap ? legend : "");
+        const style = `grid-template-columns:repeat(${cols}, minmax(0, 1fr))`;
+        return `<section class="arow"><div class="bands" style="${style}">${bands}</div><div class="tiles" style="${style}">${tiles}</div></section>`;
+      }).join("");
+    };
+    const rowsHtml = few ? oneRow("big") : mid ? oneRow("mid") : twoRows();
     const effBand = band(p.eff);
     const total = p.cellsShown;
     const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL", `Earned ÷ paid hours · ${p.cellsWithData} of ${total} cells`)

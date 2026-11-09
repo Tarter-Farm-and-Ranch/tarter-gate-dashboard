@@ -52,7 +52,10 @@
     const barH = bar && !bar.hidden ? bar.offsetHeight : 0;
     const s = Number(params.get("scale")) || Math.min(innerWidth / 1920, (innerHeight - barH) / 1080);
     const screen = document.querySelector(".screen");
-    if (screen) screen.style.transform = "scale(" + s + ")";
+    if (!screen) return;
+    // A window wider than 16:9: the screen grows wider instead of leaving a blank strip.
+    screen.style.width = Math.max(1920, Math.floor(innerWidth / s)) + "px";
+    screen.style.transform = "scale(" + s + ")";
   }
   addEventListener("resize", fit);
 
