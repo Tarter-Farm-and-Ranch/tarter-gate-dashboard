@@ -1,0 +1,21 @@
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test:
+    # Pinned: Playwright 1.56 has no Chromium build for ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright + Chromium
+        run: |
+          npm install --no-save playwright@1.56
+          npx playwright install --with-deps chromium
+      - name: Run tests
+        run: npm test
