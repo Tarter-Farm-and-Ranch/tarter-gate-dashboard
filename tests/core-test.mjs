@@ -119,4 +119,29 @@ r = await G.collect([files[0], { name: "K9 Weekly Production.xlsx", sig: "x", mo
 assert.ok(r.warnings.some((w) => /^K9: can't read/.test(w)), "a locked file is reported, not fatal");
 void book;
 
+// --- Dashboard Settings.xlsx: which cells are on the all-cells screen
+const setWb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(setWb, XLSX.utils.aoa_to_sheet([
+  ["Tarter Gate dashboard: set SHOW to YES when a cell starts entering data"],
+  [],
+  ["AREA", "CELL", "SHOW ON TV"],
+  ["WELD", "TK1", "YES"], ["WELD", "tk2", "yes"], ["WELD", "K9", "NO"], ["FINISH", "E-Coat", "Y"], ["?", "Laser 9", "YES"], ["WELD", "AMI", ""]
+]), "Cells");
+const settings = G.readSettings(open(setWb));
+assert.deepEqual([...settings.showCells], ["TK1", "TK2", "E-Coat"], "YES / Y, any case; NO and blank are off");
+assert.deepEqual([...settings.unknown], ["Laser 9"]);
+r = await G.collect([files[0], files[1], file("Dashboard Settings.xlsx", setWb)], {}, now);
+assert.deepEqual([...r.data.showCells], ["TK1", "TK2", "E-Coat"]);
+assert.ok(r.warnings.some((w) => /"Laser 9" isn't a cell/.test(w)));
+const v2 = G.buildView(r.data, new Date("2026-11-09T15:42:00Z"));
+assert.equal(v2.plant.cellsShown, 3, "the settings file decides the screen");
+assert.deepEqual(v2.shownAreas.map((a) => a.name), ["WELD", "FINISH"]);
+r = await G.collect([files[1]], {}, now);
+assert.equal(r.data.showCells, null, "no settings file: PLANT.showCells");
+const offWb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(offWb, XLSX.utils.aoa_to_sheet([["CELL", "SHOW"], ["TK1", "NO"]]), "Cells");
+r = await G.collect([files[1], file("Dashboard Settings.xlsx", offWb)], {}, now);
+assert.equal(r.data.showCells, null, "nothing set to YES: PLANT.showCells, with a warning");
+assert.ok(r.warnings.some((w) => /no cell set to YES/.test(w)));
+
 console.log("core-test: ok");

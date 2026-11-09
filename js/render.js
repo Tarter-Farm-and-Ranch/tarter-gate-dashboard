@@ -141,7 +141,7 @@ var Gate = Gate || {};
   G.renderPlant = function (view, now, opts) {
     opts = opts || {};
     const p = view.plant;
-    const shownAreas = G.shownAreas();
+    const shownAreas = view.shownAreas || G.shownAreas();
     const shownCount = shownAreas.reduce((n, a) => n + a.cells.length, 0);
     // A few cells (the rollout starts with TK1 and TK2): one row of big cards.
     const few = shownCount <= 4;

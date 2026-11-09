@@ -30,6 +30,9 @@ try {
   assert.equal((await r.json()).changed, false, "same numbers again is only a heartbeat");
   r = await fetch(base + "/api/feed-snapshot");
   assert.equal((await r.json()).data.cells.TK1.weeks["2026-11-09"]["0-1st"].parts[0].actual, 240);
+  r = await post({ data: { cells: { TK1: cell }, showCells: ["TK1", "E-Coat"] } });
+  r = await fetch(base + "/api/feed-snapshot");
+  assert.deepEqual((await r.json()).data.showCells, ["TK1", "E-Coat"], "the settings file's cells reach the TVs");
 
   process.env.PUBLISH_KEY = "k1";
   r = await post({ data: { cells: {} } });
@@ -60,7 +63,8 @@ try {
     assert.match(await page.textContent("[data-clock]"), /^11:15:\d\d AM$/, "clock with seconds, plant time");
     await page.goto(base + "/?tv=1");
     await page.waitForSelector(".tiles .card");
-    assert.equal(await page.locator(".tiles .card").count(), 3, "TK1 + TK2 (PLANT.showCells) + legend");
+    assert.equal(await page.locator(".tiles .card").count(), 3, "TK1 + E-Coat (Dashboard Settings) + legend");
+    assert.match(await page.textContent(".tiles"), /E-Coat/);
     assert.equal(await page.locator(".few").count(), 1, "big cards for a few cells");
     assert.equal(await page.locator(".tiles .card .c-saved").count(), 0, "no save time when the workbook didn't come with one");
     assert.match(await page.textContent(".tiles"), /PARTS THIS SHIFT[\s\S]*1002767/, "big cards list the parts");

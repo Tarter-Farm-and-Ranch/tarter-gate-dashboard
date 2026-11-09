@@ -15,6 +15,10 @@ Gate.PLANT = {
   // Every screen shows plant wall-clock time, whatever zone its device is set to.
   timeZone: "America/New_York",
   standardsFile: "Production Standards.xlsx",
+  // On/off switch per cell, kept with the workbooks: a CELL column and a SHOW column
+  // (YES / NO). A cell set to YES appears on the all-cells screen. Without this file the
+  // screen uses showCells below.
+  settingsFile: "Dashboard Settings.xlsx",
   cellFilePattern: /^(.+?) Weekly Production\.xlsx$/i,
   // Shift windows in plant time. 2nd shift ends after midnight and belongs to the day it started.
   shifts: {
@@ -27,8 +31,8 @@ Gate.PLANT = {
     { name: "FINISH", cells: ["E-Coat", "Powder Coat"] },
     { name: "ASSEMBLY", cells: ["Gate Line", "Feeder Shop", "Cattle", "Assembly"] }
   ],
-  // Cells on the all-cells screen while the rollout starts with TK1 and TK2 (Mike, 11/4).
-  // Add a cell's name here when it starts entering data; [] shows every cell above.
+  // Cells on the all-cells screen when there is no Dashboard Settings.xlsx (the rollout
+  // starts with TK1 and TK2, Mike 11/4); [] shows every cell above.
   // Any cell can still be opened on its own with ?cell=<name>.
   showCells: ["TK1", "TK2"],
   // % to goal color bands, same as West: 80%+ on pace, 60-79% behind, under 60% off pace.
@@ -59,9 +63,12 @@ Gate.allCells = function () {
   return Gate.PLANT.areas.reduce(function (all, a) { return all.concat(a.cells); }, []);
 };
 
-/** The areas and cells on the all-cells screen (PLANT.showCells, or all of them). */
-Gate.shownAreas = function () {
-  var show = Gate.PLANT.showCells || [];
+/**
+ * The areas and cells on the all-cells screen: `list` (from Dashboard Settings.xlsx, via
+ * the data) when there is one, else PLANT.showCells; an empty list shows every cell.
+ */
+Gate.shownAreas = function (list) {
+  var show = Array.isArray(list) ? list : Gate.PLANT.showCells || [];
   var lower = show.map(function (c) { return String(c).toLowerCase(); });
   return Gate.PLANT.areas.map(function (a) {
     return { name: a.name, cells: show.length ? a.cells.filter(function (c) { return lower.indexOf(c.toLowerCase()) >= 0; }) : a.cells.slice() };

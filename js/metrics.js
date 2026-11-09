@@ -132,7 +132,8 @@ var Gate = Gate || {};
     let earned = 0, paid = 0, ops = 0, downtime = 0, cellsWithData = 0, shownCount = 0;
     const adh = [], noStdCells = [];
     const shown = {};
-    for (const a of G.shownAreas()) for (const n of a.cells) shown[n] = true;
+    const shownAreas = G.shownAreas(data ? data.showCells : null);
+    for (const a of shownAreas) for (const n of a.cells) shown[n] = true;
     for (const area of PLANT.areas) {
       for (const name of area.cells) {
         const c = cells[name];
@@ -148,7 +149,7 @@ var Gate = Gate || {};
       }
     }
     return {
-      now, clock, shift, tiles,
+      now, clock, shift, tiles, shownAreas,
       plant: {
         eff: paid > 0 ? Math.round(earned / paid * 100) : null,
         adherence: adh.length ? Math.round(adh.reduce((a, b) => a + b, 0) / adh.length) : null,

@@ -5,9 +5,10 @@ each work cell fills in during the shift. Same look as the West dashboard.
 
 - **All cells**: one card per work cell with % to goal, UPLH vs. goal, schedule done,
   actual vs. scheduled pieces, operators, downtime, and parts made without an Epicor standard.
-  While the rollout starts with TK1 and TK2, only the cells in `PLANT.showCells`
-  (`js/config.js`) are on this screen, as big cards with their parts; add a cell there when
-  it starts entering data (`[]` = every cell).
+  Only the cells switched on are on this screen: `Dashboard Settings.xlsx` in the same
+  folder, column SHOW ON TV = YES (read like the workbooks, so it works on Vercel and in
+  the portal; add it to the portal feed's files). Without that file, `PLANT.showCells` in
+  `js/config.js`. With four cells or fewer they are big cards with their parts.
 - **One cell** (`?cell=TK1`): the cell's parts this shift with forecast, actual, standard
   and crew, plus its last shifts.
 - **Preview** (`?preview=1`, `?preview=1&cell=AWL1`): sample data, nothing read or published.

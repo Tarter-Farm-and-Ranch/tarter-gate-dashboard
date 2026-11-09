@@ -189,7 +189,7 @@
     state.data = r.data;
     // Which folder, and when each cell on the screen was last saved: the quick check that
     // the workbook being edited is the one in this folder (and that it was saved).
-    const shownSaves = G.shownAreas().reduce((all, a) => all.concat(a.cells), []).map((n) => {
+    const shownSaves = G.shownAreas(r.data.showCells).reduce((all, a) => all.concat(a.cells), []).map((n) => {
       const c = r.data.cells[n];
       return n + " " + (c && c.savedAt ? G.savedText(c.savedAt, new Date()).toLowerCase() : "no workbook");
     });

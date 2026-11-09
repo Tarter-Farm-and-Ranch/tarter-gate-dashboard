@@ -137,6 +137,38 @@ var Gate = Gate || {};
     };
   };
 
+  /**
+   * Dashboard Settings.xlsx: the first sheet with a CELL header and a SHOW header. Cells
+   * whose SHOW says YES (also Y, SI, X, TRUE, 1, ON) are on the all-cells screen.
+   * -> { showCells: ["TK1", ...], unknown: [names that aren't cells in js/config.js] }
+   */
+  G.readSettings = function (wb) {
+    const yes = /^(y|yes|si|sí|x|true|1|on)$/i;
+    for (const name of wb.SheetNames || Object.keys(wb.Sheets)) {
+      const ws = wb.Sheets[name];
+      const r = ws && (range(ws["!ref"]) || usedRange(ws));
+      if (!r) continue;
+      for (let hr = r.r0; hr <= Math.min(r.r1, r.r0 + 10); hr++) {
+        let cc = -1, sc = -1;
+        for (let c = r.c0; c <= r.c1; c++) {
+          const h = norm(cellValue(ws, c, hr)).toLowerCase();
+          if (cc < 0 && /^(cell|work cell|department|celda)$/.test(h)) cc = c;
+          if (sc < 0 && /^(show|show on tv|on screen|mostrar)/.test(h)) sc = c;
+        }
+        if (cc < 0 || sc < 0) continue;
+        const showCells = [], unknown = [];
+        for (let row = hr + 1; row <= r.r1; row++) {
+          const raw = norm(cellValue(ws, cc, row));
+          if (!raw || !yes.test(norm(cellValue(ws, sc, row)))) continue;
+          const known = G.allCells().find((c) => c.toLowerCase() === raw.toLowerCase());
+          if (known) { if (showCells.indexOf(known) < 0) showCells.push(known); } else unknown.push(raw);
+        }
+        return { showCells, unknown };
+      }
+    }
+    throw new Error("no sheet with CELL and SHOW columns");
+  };
+
   /** "11-9-26" -> "2026-11-09" (tab names are the Monday of the week). */
   G.tabMonday = function (name) {
     const m = /^\s*(\d{1,2})[-./](\d{1,2})[-./](\d{2}|\d{4})\s*$/.exec(name);
@@ -256,6 +288,23 @@ var Gate = Gate || {};
       }
     }
 
+    // Which cells are on the screen: Dashboard Settings.xlsx when it's in the folder.
+    const settingsName = (G.PLANT.settingsFile || "").toLowerCase();
+    const set = settingsName ? usable.filter((f) => base(f.name).toLowerCase() === settingsName).sort(newestFirst)[0] : null;
+    if (!set) {
+      cache.settings = null;
+      cache.settingsSig = "";
+    } else if (set.sig !== cache.settingsSig) {
+      try {
+        cache.settings = G.readSettings(await set.load());
+        cache.settingsSig = set.sig;
+      } catch (err) {
+        warnings.push(G.PLANT.settingsFile + ": " + (err && err.message ? err.message : err) + (cache.settings ? " (using the last good copy)" : ""));
+      }
+    }
+    if (cache.settings) for (const u of cache.settings.unknown) warnings.push(G.PLANT.settingsFile + ": \"" + u + "\" isn't a cell in js/config.js");
+    if (cache.settings && !cache.settings.showCells.length) warnings.push(G.PLANT.settingsFile + ": no cell set to YES, showing " + (G.PLANT.showCells.length ? G.PLANT.showCells.join(", ") : "every cell"));
+
     const mondays = G.weeksToRead(nowMs);
     const byCell = {};
     for (const f of usable.slice().sort(newestFirst)) {
@@ -290,7 +339,9 @@ var Gate = Gate || {};
         cells,
         timeZone: G.PLANT.timeZone,
         missingStandards: !std,
-        standardsSavedAt: std && std.modified ? new Date(std.modified).toISOString() : ""
+        standardsSavedAt: std && std.modified ? new Date(std.modified).toISOString() : "",
+        // null: no settings file (the screen uses PLANT.showCells).
+        showCells: cache.settings && cache.settings.showCells.length ? cache.settings.showCells.slice() : null
       },
       warnings,
       failed
