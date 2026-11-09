@@ -65,10 +65,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .arow { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
 .bands, .tiles { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); column-gap: 14px; }
 .band { display: flex; align-items: baseline; gap: 12px; border-bottom: 3px solid var(--navy); padding-bottom: 3px; }
-.band b { font-size: 18px; font-weight: 900; letter-spacing: .14em; }
-.band span { font-size: 14px; font-weight: 700; color: var(--slate); }
-.hdr .lg-inline { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: rgba(255,255,255,.8); white-space: nowrap; }
-.lg-inline i { width: 12px; height: 12px; border-radius: 3px; margin-left: 10px; }
+.band b { font-size: 24px; font-weight: 900; letter-spacing: .14em; }
+.band span { font-size: 16px; font-weight: 700; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sysact { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 22px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); color: #fff; font-size: 15px; font-weight: 900; letter-spacing: .1em; white-space: nowrap; }
+.sysact i { width: 10px; height: 10px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 8px #22C55E; }
+.sys-warn { border-color: #F59E0B; color: #FDE68A; } .sys-warn i { background: #F59E0B; box-shadow: 0 0 8px #F59E0B; }
 .hstrip { margin-top: 10px; border-top: 2px solid #E2E8F0; padding-top: 8px; }
 .hchips { display: flex; flex-wrap: wrap; gap: 8px; }
 .hc { display: inline-flex; align-items: baseline; gap: 6px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 4px 9px; }

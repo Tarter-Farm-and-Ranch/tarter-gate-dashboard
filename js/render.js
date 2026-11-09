@@ -63,7 +63,7 @@ var Gate = Gate || {};
     <div class="sep"></div>
     <div class="titles"><div class="t1">${esc(titles.top)}</div><div class="t2">${esc(titles.bottom)}</div></div>
     <div class="grow"></div>
-    ${opts.legend || ""}
+    ${opts.alert ? '<div class="sysact sys-warn"><i></i>CHECK DATA FEED</div>' : '<div class="sysact"><i></i>SYSTEM ACTIVE</div>'}
     ${opts.sample ? '<div class="chip-sample">SAMPLE DATA · PREVIEW</div>' : ""}
     ${shiftBlock}
     <div class="clock"><div class="c1" data-clock>${esc(c.time)}</div><div class="c2" data-date>${esc(c.date)}</div></div>
@@ -178,7 +178,6 @@ var Gate = Gate || {};
       <div class="lg-k"><i class="bg-on"></i>${PLANT.bands.on}%+ ON PACE</div>
       <div class="lg-k"><i class="bg-behind"></i>${PLANT.bands.behind}–${PLANT.bands.on - 1}% BEHIND PACE</div>
       <div class="lg-k"><i class="bg-off"></i>UNDER ${PLANT.bands.behind}% OFF PACE</div></div>`;
-    const inlineLegend = `<span class="lg-inline"><i class="bg-on"></i>${PLANT.bands.on}%+ on pace<i class="bg-behind"></i>${PLANT.bands.behind}–${PLANT.bands.on - 1}% behind<i class="bg-off"></i>under ${PLANT.bands.behind}% off pace</span>`;
     const areaAvg = (cells) => {
       const vals = view.tiles.filter((t) => cells.indexOf(t.name) >= 0 && t.m && has(t.m.eff)).map((t) => Math.min(t.m.eff, 150));
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
@@ -224,7 +223,7 @@ var Gate = Gate || {};
       + kpi(int(p.ops), "OPERATORS", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
       + kpi(`<span class="${p.downtime ? "t-behind" : ""}">${int(p.downtime)}</span><small>min</small>`, "DOWNTIME", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
       + shiftLeftKpi(view);
-    return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, Object.assign({ legend: few || mid ? inlineLegend : "" }, opts))}
+    return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, opts)}
   <main class="plant"><div class="kpis">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
   };
 

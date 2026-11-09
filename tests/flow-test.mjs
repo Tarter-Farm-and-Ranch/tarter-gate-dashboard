@@ -64,7 +64,7 @@ try {
     await page.goto(base + "/?tv=1");
     await page.waitForSelector(".tiles .card");
     assert.equal(await page.locator(".tiles .card").count(), 2, "TK1 + E-Coat (Dashboard Settings)");
-    assert.match(await page.textContent(".hdr"), /80%\+ on pace/, "one row: the color legend is in the header");
+    assert.match(await page.textContent(".hdr"), /SYSTEM ACTIVE/, "header says the system is active, like West");
     assert.match(await page.textContent(".tiles"), /E-Coat/);
     assert.equal(await page.locator(".few").count(), 1, "big cards for a few cells");
     assert.equal(await page.locator(".tiles .card .c-saved").count(), 0, "no save time when the workbook didn't come with one");
