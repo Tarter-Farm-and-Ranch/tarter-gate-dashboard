@@ -187,7 +187,13 @@
     }));
     const r = await G.collect(files, source.cache, Date.now());
     state.data = r.data;
-    state.status = Object.keys(r.data.cells).length + " cell workbooks read" + (r.warnings.length ? " · " + r.warnings.join(" · ") : "");
+    // Which folder, and when each cell on the screen was last saved: the quick check that
+    // the workbook being edited is the one in this folder (and that it was saved).
+    const shownSaves = G.shownAreas().reduce((all, a) => all.concat(a.cells), []).map((n) => {
+      const c = r.data.cells[n];
+      return n + " " + (c && c.savedAt ? G.savedText(c.savedAt, new Date()).toLowerCase() : "no workbook");
+    });
+    state.status = "Folder \"" + dir.name + "\" · " + shownSaves.join(" · ") + " · " + Object.keys(r.data.cells).length + " cell workbooks read" + (r.warnings.length ? " · " + r.warnings.join(" · ") : "");
     await publish();
   }
 
@@ -235,7 +241,7 @@
 
   function paintStatus() {
     const el = $("status");
-    if (el && state.status) el.textContent = state.status;
+    if (el && state.status) { el.textContent = state.status; el.title = state.status; }
   }
 
   async function tick(first) {

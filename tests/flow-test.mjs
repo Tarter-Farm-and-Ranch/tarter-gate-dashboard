@@ -62,6 +62,7 @@ try {
     await page.waitForSelector(".tiles .card");
     assert.equal(await page.locator(".tiles .card").count(), 3, "TK1 + TK2 (PLANT.showCells) + legend");
     assert.equal(await page.locator(".few").count(), 1, "big cards for a few cells");
+    assert.equal(await page.locator(".tiles .card .c-saved").count(), 0, "no save time when the workbook didn't come with one");
     assert.match(await page.textContent(".tiles"), /PARTS THIS SHIFT[\s\S]*1002767/, "big cards list the parts");
     assert.match(await page.textContent(".kpis"), /NO STANDARD/);
     assert.match(await page.textContent(".kpi-dark"), /5h 15m\s*SHIFT LEFT\s*1st shift · ends 4:30 PM/);
@@ -69,6 +70,7 @@ try {
     await page.goto(base + "/preview");
     await page.waitForSelector(".chip-sample");
     assert.equal(await page.locator(".tiles .card").count(), 3);
+    assert.match(await page.textContent(".tiles .card .c-saved"), /^SAVED \d{1,2}:\d\d [AP]M$/, "each card says when its workbook was saved");
     await page.goto(base + "/?preview=1&cell=AWL1");
     await page.waitForSelector(".cleft");
     assert.match(await page.textContent(".hdr"), /AWL1/, "a cell not on the plant screen still opens on its own");

@@ -71,6 +71,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .tiles .card { display: flex; flex-direction: column; padding: 10px 14px 10px; min-width: 0; overflow: hidden; }
 .c-top { display: flex; align-items: baseline; min-width: 0; }
 .c-name { font-size: 25px; font-weight: 900; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-saved { font-size: 11px; font-weight: 800; color: #64748B; letter-spacing: .06em; white-space: nowrap; }
+.few .c-saved { font-size: 17px; }
 .c-rg { font-size: 11px; font-weight: 800; color: #94A3B8; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .c-meta { display: flex; align-items: center; gap: 8px; margin: 3px 0 7px; min-height: 26px; }
 .pill { display: inline-flex; align-items: center; gap: 6px; background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 7px; padding: 2px 9px; font-size: 16px; font-weight: 900; }
@@ -196,7 +198,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .alert { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); background: #7F1D1D; color: #fff; font-size: 20px; font-weight: 800; letter-spacing: .04em; padding: 12px 26px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); max-width: 1700px; text-align: center; }
 
 /* source PC bar */
-.srcbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 8px 14px; background: #0F172A; color: #E2E8F0; font: 600 13px Inter, "Segoe UI", sans-serif; z-index: 10; }
+.srcbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #0F172A; color: #E2E8F0; font: 600 15px Inter, "Segoe UI", sans-serif; z-index: 10; border-top: 3px solid var(--red); }
 .srcbar[hidden] { display: none; }
 .srcbar button { background: var(--red); color: #fff; border: 0; border-radius: 6px; padding: 7px 14px; font: 800 13px Inter, sans-serif; letter-spacing: .06em; cursor: pointer; }
 .srcbar button.warn { background: #F59E0B; color: #111827; }

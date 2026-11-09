@@ -138,7 +138,7 @@ var Gate = Gate || {};
         const c = cells[name];
         const block = c && c.weeks && c.weeks[shift.monday] ? c.weeks[shift.monday][shift.key] || null : null;
         const m = blockMetrics(block, shift.fraction);
-        tiles.push({ name, area: area.name, rg: c ? c.rg : "", hasFile: !!c, block, m, history: c ? history(c, shift) : [], shown: !!shown[name] });
+        tiles.push({ name, area: area.name, rg: c ? c.rg : "", savedAt: c && c.savedAt ? c.savedAt : "", hasFile: !!c, block, m, history: c ? history(c, shift) : [], shown: !!shown[name] });
         // The plant numbers cover the cells on the all-cells screen.
         if (!shown[name]) continue;
         shownCount++;
@@ -148,7 +148,7 @@ var Gate = Gate || {};
       }
     }
     return {
-      clock, shift, tiles,
+      now, clock, shift, tiles,
       plant: {
         eff: paid > 0 ? Math.round(earned / paid * 100) : null,
         adherence: adh.length ? Math.round(adh.reduce((a, b) => a + b, 0) / adh.length) : null,

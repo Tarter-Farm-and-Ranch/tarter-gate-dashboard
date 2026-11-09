@@ -31,6 +31,17 @@ var Gate = Gate || {};
     };
   };
 
+  /** "SAVED 11:58 AM" (today, plant time) or "SAVED 11/4" (an older save): when the cell's workbook was last saved. */
+  G.savedText = function (iso, now) {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    const tz = PLANT.timeZone;
+    const day = (d) => new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "numeric", day: "numeric" }).format(d);
+    const today = day(now || new Date()) === day(new Date(t));
+    return "SAVED " + (today ? new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(new Date(t)) : day(new Date(t)));
+  };
+  const saved = (t, now) => (t.savedAt ? `<span class="c-saved">${esc(G.savedText(t.savedAt, now))}</span>` : "");
+
   /** Progress ring like West's: grey track, colored arc, the number in the middle. */
   function ring(value, size, color) {
     const p = has(value) ? Math.max(0, Math.min(100, value)) : 0;
@@ -77,7 +88,7 @@ var Gate = Gate || {};
     if (!t.hasFile || !m) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
-      <div class="c-meta"><span class="c-rg">${esc(t.rg)}</span></div>
+      <div class="c-meta"><span class="c-rg">${esc(t.rg)}</span>${saved(t, view.now)}</div>
       <div class="c-empty"><b>${t.hasFile ? "NOTHING ENTERED" : "NO FILE YET"}</b><span>${t.hasFile ? "for " + esc(view.shift.label.toLowerCase()) : "No " + esc(t.name) + " workbook in the folder"}</span></div></div>`;
     }
     const b = band(m.eff);
@@ -91,7 +102,7 @@ var Gate = Gate || {};
     const extra = m.made - m.schedMade;
     return `<div class="card tb-${b}">
     <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
-    <div class="c-meta"><span class="pill">${PERSON}${int(m.ops)}</span><span class="c-rg">${esc(t.rg)}</span><span class="grow"></span>${SHORT_CHIP[b] ? `<span class="chip ch-${b}">${SHORT_CHIP[b]}</span>` : ""}</div>
+    <div class="c-meta"><span class="pill">${PERSON}${int(m.ops)}</span><span class="c-rg">${esc(t.rg)}</span>${big ? saved(t, view.now) : ""}<span class="grow"></span>${SHORT_CHIP[b] ? `<span class="chip ch-${b}">${SHORT_CHIP[b]}</span>` : ""}</div>
     <div class="hero h-${b}">
       <div class="h-l">UPLH THIS SHIFT</div>
       <div class="h-v"><b>${fix1(m.uplh)}</b><span>/ ${fix1(m.goal)} <em>GOAL</em></span></div>

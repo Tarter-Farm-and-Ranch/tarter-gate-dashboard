@@ -57,7 +57,7 @@ G.sampleData = function (now) {
         n++;
       }
     }
-    cells[name] = { rg: spec[0], site: "MfgSys", title: name, weeks, warnings: [] };
+    cells[name] = { rg: spec[0], site: "MfgSys", title: name, weeks, warnings: [], savedAt: new Date((now || new Date()).getTime() - (2 + i * 3) * 60e3).toISOString() };
   }
   return { cells };
 };
