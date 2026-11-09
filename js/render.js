@@ -130,7 +130,7 @@ var Gate = Gate || {};
   /** Big and medium cards: the cell's last shifts, % to goal, as compact chips ("now" last). */
   function histStrip(t, count) {
     const h = t.history.slice(-count);
-    if (h.length < 2) return "";
+    if (h.length < 2) return `<div class="hstrip"><div class="pl-h"><span>LAST SHIFTS · TO GOAL</span></div><div class="hc-empty">Previous shifts show here as the week's tab fills in.</div></div>`;
     const chips = h.map((x) => `<span class="hc${x.now ? " hc-now" : ""}"><em>${x.now ? "NOW" : esc(x.day + " " + x.shift)}</em><b class="t-${band(x.eff)}">${x.eff}%</b></span>`).join("");
     return `<div class="hstrip"><div class="pl-h"><span>LAST SHIFTS · TO GOAL</span></div><div class="hchips">${chips}</div></div>`;
   }
