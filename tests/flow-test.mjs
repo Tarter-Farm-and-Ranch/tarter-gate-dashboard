@@ -69,7 +69,7 @@ try {
     assert.equal(await page.locator(".few").count(), 1, "big cards for a few cells");
     assert.equal(await page.locator(".tiles .card .c-saved").count(), 0, "no save time when the workbook didn't come with one");
     assert.match(await page.textContent(".tiles"), /PARTS · 1ST SHIFT[\s\S]*1002767/, "big cards list the parts, with the shift they belong to");
-    assert.match(await page.textContent(".kpis"), /NO STANDARD/);
+    assert.doesNotMatch(await page.textContent(".kpis"), /STANDARD/, "no standards tile at the top; the cards say it");
     assert.match(await page.textContent(".kpi-dark"), /5h 15m\s*SHIFT LEFT\s*1st shift\s*ends 4:30 PM/);
     assert.equal(await page.locator(".tarter-mark").count(), 1, "the real Tarter logo");
     await page.goto(base + "/preview");

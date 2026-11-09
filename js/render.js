@@ -130,7 +130,7 @@ var Gate = Gate || {};
   /** Big and medium cards: the cell's last shifts, % to goal, as compact chips ("now" last). */
   function histStrip(t, count) {
     const h = t.history.slice(-count);
-    if (h.length < 2) return `<div class="hstrip"><div class="pl-h"><span>LAST SHIFTS · TO GOAL</span></div><div class="hc-empty">Previous shifts show here as the week's tab fills in.</div></div>`;
+    if (h.length < 2) return "";
     const chips = h.map((x) => `<span class="hc${x.now ? " hc-now" : ""}"><em>${x.now ? "NOW" : esc(x.day + " " + x.shift)}</em><b class="t-${band(x.eff)}">${x.eff}%</b></span>`).join("");
     return `<div class="hstrip"><div class="pl-h"><span>LAST SHIFTS · TO GOAL</span></div><div class="hchips">${chips}</div></div>`;
   }
@@ -223,9 +223,6 @@ var Gate = Gate || {};
       + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE", `Avg done · ${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
       + kpi(int(p.ops), "OPERATORS", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
       + kpi(`<span class="${p.downtime ? "t-behind" : ""}">${int(p.downtime)}</span><small>min</small>`, "DOWNTIME", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
-      + (p.noStd
-        ? kpi(`<span class="t-off">${p.noStd}</span>`, "NO STANDARD", esc(p.noStdCells.join(", ")) + " · add in Epicor", "kpi-red")
-        : kpi(`<span class="t-on">✓</span>`, "STANDARDS", "Every part has a standard"))
       + shiftLeftKpi(view);
     return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, Object.assign({ legend: few || mid ? inlineLegend : "" }, opts))}
   <main class="plant"><div class="kpis">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
