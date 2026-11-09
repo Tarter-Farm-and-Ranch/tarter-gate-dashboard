@@ -1,10 +1,10 @@
 {
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/tv", "destination": "/" },
-    { "source": "/tv/:cell", "destination": "/" },
-    { "source": "/preview", "destination": "/" },
-    { "source": "/preview/:cell", "destination": "/" }
+  "redirects": [
+    { "source": "/tv", "destination": "/?tv=1", "permanent": false },
+    { "source": "/tv/:cell", "destination": "/?tv=1&cell=:cell", "permanent": false },
+    { "source": "/preview", "destination": "/?preview=1", "permanent": false },
+    { "source": "/preview/:cell", "destination": "/?preview=1&cell=:cell", "permanent": false }
   ],
   "headers": [
     {

@@ -2,7 +2,9 @@
 // Shaped exactly like what the source PC publishes, and built for "now", so the preview
 // looks live at any hour.
 
-import { plantClock, currentShift, mondayOf, addDays } from "./metrics.js";
+var Gate = Gate || {};
+
+(function (G) {
 
 // cell: [rg, operators, [[part, desc, forecast, std, crew], ...scheduled], [part, desc, std, crew] extra, pace, downtime]
 const CELLS = {
@@ -28,23 +30,23 @@ function block([, ops, sched, extra, pace, downtime], fraction, hours, wobble) {
   return { ops, hours, downtime: Math.round(downtime * fraction), parts };
 }
 
-export function sampleData(now = new Date()) {
-  const clock = plantClock(now);
-  const shift = currentShift(clock);
+G.sampleData = function (now) {
+  const clock = G.plantClock(now || new Date());
+  const shift = G.currentShift(clock);
   const cells = {};
   let i = 0;
   for (const [name, spec] of Object.entries(CELLS)) {
     i++;
     const weeks = {};
     const put = (dayISO, key, fraction, hours, wobble) => {
-      const w = mondayOf(dayISO);
+      const w = G.mondayOf(dayISO);
       (weeks[w] = weeks[w] || {})[key] = block(spec, fraction, hours, wobble);
     };
     // The running shift, then the 7 shifts before it (two per weekday, one on weekend days).
     put(shift.dayISO, shift.key, shift.fraction, shift.hours, 1);
     let n = 0;
     for (let back = 0; back < 7 && n < 7; back++) {
-      const dayISO = addDays(shift.dayISO, -back);
+      const dayISO = G.addDays(shift.dayISO, -back);
       const dayIndex = (shift.dayIndex - back + 70) % 7;
       const list = dayIndex <= 4 ? ["2nd", "1st"] : ["wknd"];
       for (const s of list) {
@@ -58,4 +60,5 @@ export function sampleData(now = new Date()) {
     cells[name] = { rg: spec[0], site: "MfgSys", title: name, weeks, warnings: [] };
   }
   return { cells };
-}
+};
+})(Gate);

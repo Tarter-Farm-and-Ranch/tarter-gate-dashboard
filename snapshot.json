@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "about": "The Tarter Portal builds _feed/snapshot.json by running these scripts, in order, then calling entry(manifestText, previousText). See js/snapshot.js.",
+  "scripts": [
+    "js/config.js",
+    "js/reader.js",
+    "js/portal.js",
+    "js/snapshot.js"
+  ],
+  "entry": "buildGateSnapshot"
+}

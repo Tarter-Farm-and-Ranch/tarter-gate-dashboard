@@ -1,34 +1,61 @@
 # Tarter Gate (TGC) Production Dashboard
 
 Live production screens for the Gate plant, built from the weekly production workbooks
-each work cell fills in during the shift.
+each work cell fills in during the shift. Same look as the West dashboard.
 
-- **All cells** (`/tv`): one tile per work cell with % to goal, UPLH vs. goal, pieces vs.
-  schedule, operators, downtime, and parts made without an Epicor standard.
-- **One cell** (`/tv/<cell>`, e.g. `/tv/TK1`): the cell's parts this shift with forecast,
-  actual, standard and crew, plus its last shifts.
-- **Preview** (`/preview`, `/preview/AWL1`): sample data, nothing read or published.
+- **All cells**: one card per work cell with % to goal, UPLH vs. goal, schedule done,
+  actual vs. scheduled pieces, operators, downtime, and parts made without an Epicor standard.
+- **One cell** (`?cell=TK1`): the cell's parts this shift with forecast, actual, standard
+  and crew, plus its last shifts.
+- **Preview** (`?preview=1`, `?preview=1&cell=AWL1`): sample data, nothing read or published.
 
-## How it works
+## Two ways to run it (same code)
+
+### Tarter Portal (where it's meant to live)
+
+The portal serves this repo (`index.html`, `js/`, `vendor/`) with a `_feed/` folder next to
+the page that it fills from SharePoint. The page finds `_feed/manifest.json` and switches to
+portal mode by itself: no source PC, no Supabase, no Vercel.
 
 ```
-SharePoint "Production Reporting" folder (synced with OneDrive on the source PC)
+SharePoint "Production Reporting" folder
   ├─ <Cell> Weekly Production.xlsx   one per work cell, one tab per week ("11-9-26")
   └─ Production Standards.xlsx       Epicor export (part, resource group, site, crew, std)
+        │  read by the Tarter Portal
+        ▼
+  _feed/manifest.json + each workbook as JSON
+        │  snapshot.json: the portal runs js/config.js, reader.js, portal.js, snapshot.js
+        │  and calls buildGateSnapshot(manifest, previous) -> _feed/snapshot.json (a few KB)
+        ▼
+  every TV: reads the manifest every 30 s, then the snapshot when it changes
+```
+
+- If the portal doesn't build the snapshot, the page reads the workbooks from the feed
+  itself (same reader), only downloading the ones that changed.
+- While the portal reports it can't read SharePoint, the screens keep the last numbers
+  with a red banner. A workbook that can't be read for a moment keeps its last good read.
+- The status line in the portal's TV bar comes from the page (`postMessage({ tvUpdated })`).
+- One dashboard in the portal is enough: TVs that show one cell use `?cell=TK1` (or `#cell=TK1`).
+
+### Vercel (testing)
+
+```
+OneDrive-synced folder on the source PC
         │  read every 10 s by the source PC's browser (Chrome/Edge, "Connect Folder")
         ▼
   POST /api/publish  ──►  Supabase table gate_snapshot (one row)
                                 │
-  every TV:  GET /api/feed-snapshot every 15 s, computes the numbers for the current minute
+  every TV (?tv=1): GET /api/feed-snapshot every 15 s
 ```
 
 - Only the source PC reads files. TVs just open a link; no login, no folder.
 - The source PC publishes the raw week (parts, forecast, actual, operators, hours,
   downtime, and the standard/crew looked up from the export). Each screen computes % to
   goal itself, so the pace keeps moving between saves.
-- Standards are looked up by **part + resource group (cell B1) + site (cell E1)**. Epicor
-  repeats operations for alternate routings: the main routing wins, an alternate is used
-  only when the part has nothing else in that resource group, copies are never added up.
+
+Either way, standards are looked up by **part + resource group (cell B1) + site (cell E1)**.
+Epicor repeats operations for alternate routings: the main routing wins, an alternate is
+used only when the part has nothing else in that resource group, copies are never added up.
 
 ### The numbers
 
@@ -52,19 +79,23 @@ Between shifts the screens show the last shift that ran. All in `js/config.js`.
 
 | Path | What it is |
 |---|---|
+| `index.html` | The page and its styles (inline, so the portal needs only `index.html`, `js/`, `vendor/`) |
 | `js/config.js` | Plant settings: cells and areas, site, time zone, shifts, color bands, workbook layout |
-| `js/reader.js` | Reads the workbooks and the standards export (SheetJS) |
+| `js/reader.js` | Reads the workbooks and the standards export; `collect()` turns a folder or feed into the screens' data |
 | `js/metrics.js` | Shift clock and every number on the screens |
 | `js/render.js` | The two screens (HTML) |
-| `js/app.js` | Source PC folder reading + publishing; TV polling |
+| `js/portal.js`, `js/snapshot.js`, `snapshot.json` | Tarter Portal feed and the summary the portal builds |
+| `js/app.js` | Picks the mode (portal, Vercel TV, source PC, preview) and runs it |
 | `js/sample.js` | Preview data |
-| `api/publish.js`, `api/feed-snapshot.js`, `lib/` | Vercel functions and Supabase access |
-| `tests/` | `npm test` (Node 20+, Playwright for the end-to-end test) |
+| `api/`, `lib/` | Vercel functions and Supabase access (not used in the portal) |
+| `tests/` | `npm test` (Node 20+, Playwright for the end-to-end tests) |
 
-Another plant = a copy with its own `js/config.js` (cells, site, shifts), its own
-Supabase row/project and Vercel project.
+The `js/` files are plain scripts sharing one global object (`Gate`), loaded in order: no
+bundler, and the same files run in the browser, in the portal's snapshot engine and in Node.
 
-## Setup
+Another plant = a copy with its own `js/config.js` (cells, site, shifts).
+
+## Setup on Vercel (testing only; the portal needs none of this)
 
 ### 1. Supabase (one table)
 
@@ -100,8 +131,9 @@ Import this repo. Environment variables:
 
 ### 4. TVs
 
-`https://<project>.vercel.app/tv` (all cells) or `/tv/TK1` (one cell). The page scales
-to any screen; `?scale=0.9` forces a size.
+`https://<project>.vercel.app/?tv=1` (all cells) or `/?tv=1&cell=TK1` (one cell); the old
+`/tv` and `/tv/TK1` links redirect there. The page scales to any screen; `?scale=0.9`
+forces a size.
 
 ## Notes for IT
 
@@ -110,6 +142,5 @@ to any screen; `?scale=0.9` forces a size.
   fields the screens use (`lib/clean.js`).
 - To keep the links private, turn on Vercel Deployment Protection (or put the TVs behind
   the company network) and set `PUBLISH_KEY`.
-- Moving to Tarter's platform: the reading and math (`js/reader.js`, `js/metrics.js`) are
-  plain functions with tests; the transport (folder → Supabase → TVs) is the part to
-  replace, e.g. reading the files with Microsoft Graph from a server instead of a PC.
+- In the Tarter Portal none of the Vercel parts are used (`api/`, `lib/`, Supabase, the
+  source PC): the portal reads SharePoint and the page reads the portal's `_feed/`.

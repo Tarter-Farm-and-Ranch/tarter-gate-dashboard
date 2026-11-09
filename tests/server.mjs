@@ -21,10 +21,33 @@ globalThis.fetch = async (url, opts = {}) => {
   return new Response(JSON.stringify(db.row ? [db.row] : []), { status: 200, headers: { "content-type": "application/json" } });
 };
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
-export function start(port = 0) {
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".woff2": "font/woff2" };
+function sendFile(res, base, rel) {
+  const full = path.join(base, rel);
+  if (!full.startsWith(base) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) { res.statusCode = 404; res.end("not found"); return; }
+  res.setHeader("content-type", TYPES[path.extname(full)] || "application/octet-stream");
+  fs.createReadStream(full).pipe(res);
+}
+const REDIRECTS = [[/^\/tv\/?$/, "/?tv=1"], [/^\/tv\/([^/]+)$/, "/?tv=1&cell=$1"], [/^\/preview\/?$/, "/?preview=1"], [/^\/preview\/([^/]+)$/, "/?preview=1&cell=$1"]];
+
+/**
+ * Vercel stand-in, or with `portal` (a folder holding manifest.json, files/, snapshot.json)
+ * a Tarter Portal stand-in: the repo served under /d/gate/ with that folder as its _feed/.
+ */
+export function start(port = 0, opts = {}) {
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
+    if (opts.portal) {
+      if (!url.pathname.startsWith("/d/gate/")) { res.statusCode = 404; res.end("not found"); return; }
+      const rel = decodeURIComponent(url.pathname.slice("/d/gate/".length)) || "index.html";
+      if (rel.startsWith("_feed/")) return sendFile(res, path.resolve(opts.portal), rel.slice(6));
+      if (rel.startsWith("api/")) { res.statusCode = 404; res.end("not found"); return; }
+      return sendFile(res, root, rel);
+    }
+    for (const [re, to] of REDIRECTS) {
+      const m = re.exec(url.pathname);
+      if (m) { res.statusCode = 307; res.setHeader("location", to.replace("$1", m[1] || "")); res.end(); return; }
+    }
     if (url.pathname.startsWith("/api/")) {
       const mod = await import(pathToFileURL(path.join(root, url.pathname + ".js")).href);
       let body = "";
@@ -37,15 +60,11 @@ export function start(port = 0) {
       await mod.default({ method: req.method, headers: req.headers, body: body ? JSON.parse(body) : undefined }, r);
       return;
     }
-    let file = url.pathname === "/" || /^\/(tv|preview)(\/|$)/.test(url.pathname) ? "/index.html" : url.pathname;
-    const full = path.join(root, file);
-    if (!full.startsWith(root) || !fs.existsSync(full)) { res.statusCode = 404; res.end("not found"); return; }
-    res.setHeader("content-type", TYPES[path.extname(full)] || "application/octet-stream");
-    fs.createReadStream(full).pipe(res);
+    sendFile(res, root, url.pathname === "/" ? "index.html" : decodeURIComponent(url.pathname));
   });
   return new Promise((resolve) => server.listen(port, () => resolve(server)));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  start(Number(process.argv[2]) || 8780).then((s) => console.log("http://localhost:" + s.address().port));
+  start(Number(process.argv[2]) || 8780, { portal: process.argv[3] }).then((s) => console.log("http://localhost:" + s.address().port));
 }

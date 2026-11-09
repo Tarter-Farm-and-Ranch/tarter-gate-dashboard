@@ -1,7 +1,13 @@
 // Plant settings: the only file that changes from one plant to another.
-// Cells are found by file name: "<cell> Weekly Production.xlsx" in the connected folder.
+// Cells are found by file name: "<cell> Weekly Production.xlsx".
+//
+// The js/ files are plain scripts that share one global object, Gate, loaded in order by
+// index.html. The same files run in the browser, in the Tarter Portal's snapshot engine
+// (snapshot.json) and in the Node tests, so they use no import/export and no DOM.
 
-export const PLANT = {
+var Gate = Gate || {};
+
+Gate.PLANT = {
   name: "Tarter Gate",
   code: "TGC",
   // Epicor site used to look up standards (cell E1 in every workbook says the same).
@@ -27,7 +33,7 @@ export const PLANT = {
 
 // Where things are in every weekly tab (the layout of Paul's Production Schedule Test,
 // one block of 7 columns per day: A-G, I-O, Q-W, ...).
-export const LAYOUT = {
+Gate.LAYOUT = {
   blockWidth: 8,
   topRow: 2, // Monday-Friday 1st shift, Saturday and Sunday weekend
   bottomRow: 35, // Monday-Friday 2nd shift
@@ -37,13 +43,14 @@ export const LAYOUT = {
 };
 
 // Day 0 = Monday. Which block holds each day and shift.
-export function blockPosition(dayIndex, shift) {
-  if (shift === "2nd") return dayIndex <= 4 ? { top: LAYOUT.bottomRow, k: dayIndex } : null;
-  if (shift === "1st") return dayIndex <= 4 ? { top: LAYOUT.topRow, k: dayIndex } : null;
-  if (shift === "wknd") return dayIndex >= 5 ? { top: LAYOUT.topRow, k: dayIndex } : null;
+Gate.blockPosition = function (dayIndex, shift) {
+  var L = Gate.LAYOUT;
+  if (shift === "2nd") return dayIndex <= 4 ? { top: L.bottomRow, k: dayIndex } : null;
+  if (shift === "1st") return dayIndex <= 4 ? { top: L.topRow, k: dayIndex } : null;
+  if (shift === "wknd") return dayIndex >= 5 ? { top: L.topRow, k: dayIndex } : null;
   return null;
-}
+};
 
-export function allCells() {
-  return PLANT.areas.flatMap((a) => a.cells);
-}
+Gate.allCells = function () {
+  return Gate.PLANT.areas.reduce(function (all, a) { return all.concat(a.cells); }, []);
+};
