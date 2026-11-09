@@ -50,7 +50,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 
 /* KPI row (West) */
 .plant { flex-grow: 1; min-height: 0; padding: 16px 40px 18px; display: flex; flex-direction: column; gap: 10px; }
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.25fr); gap: 16px; height: 104px; flex-shrink: 0; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); gap: 16px; height: 104px; flex-shrink: 0; }
 .kpi { display: flex; align-items: center; gap: 12px; min-width: 0; background: #fff; border: 1px solid #EEF2F7; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 10px 16px; }
 .kv { font-size: 50px; font-weight: 900; line-height: 1; letter-spacing: -.02em; white-space: nowrap; flex-shrink: 0; }
 .kv small { font-size: 22px; margin-left: 2px; }
@@ -65,8 +65,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .arow { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
 .bands, .tiles { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); column-gap: 14px; }
 .band { display: flex; align-items: baseline; gap: 12px; border-bottom: 3px solid var(--navy); padding-bottom: 3px; }
-.band b { font-size: 24px; font-weight: 900; letter-spacing: .14em; }
-.band span { font-size: 16px; font-weight: 700; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.band b { font-size: 32px; font-weight: 900; letter-spacing: .12em; line-height: 1.1; }
+.band span { font-size: 19px; font-weight: 700; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sysact { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 22px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); color: #fff; font-size: 15px; font-weight: 900; letter-spacing: .1em; white-space: nowrap; }
 .sysact i { width: 10px; height: 10px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 8px #22C55E; }
 .sys-warn { border-color: #F59E0B; color: #FDE68A; } .sys-warn i { background: #F59E0B; box-shadow: 0 0 8px #F59E0B; }
@@ -110,9 +110,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .mv { font-size: 28px; font-weight: 900; line-height: 1.05; white-space: nowrap; }
 .mv small { font-size: 15px; font-weight: 800; color: #94A3B8; margin-left: 4px; }
 .c-sub { font-size: 12px; font-weight: 700; color: #94A3B8; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.note { border-left: 4px solid; border-radius: 6px; padding: 4px 8px; margin-top: 4px; }
-.note b { display: block; font-size: 11px; font-weight: 900; letter-spacing: .08em; }
-.note span { display: block; font-size: 12px; font-weight: 700; margin-top: 1px; }
+.note { border-left: 6px solid; border-radius: 8px; padding: 7px 12px; margin-top: 6px; }
+.note b { display: block; font-size: 15px; font-weight: 900; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note span { display: block; font-size: 14px; font-weight: 700; margin-top: 2px; }
 .n-red { background: #FEF2F2; border-color: #DC2626; color: #991B1B; }
 .n-amber { background: #FFFBEB; border-color: #F59E0B; color: #92400E; }
 .c-last { font-size: 12px; font-weight: 700; color: #64748B; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -147,8 +147,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .few .ml { font-size: 13px; }
 .few .mv { font-size: 52px; }
 .few .c-sub { font-size: 15px; }
-.few .note { padding: 8px 12px; }
-.few .note b { font-size: 14px; } .few .note span { font-size: 15px; }
+.few .note { padding: 8px 16px; } .few .note b { font-size: 20px; } .few .note span { font-size: 16px; }
 .few .c-last { font-size: 15px; }
 .few .c-empty b { font-size: 30px; } .few .c-empty span { font-size: 18px; }
 .few .legend .lg-t, .few .legend .lg-k { font-size: 16px; }
@@ -170,7 +169,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .mid .ml { font-size: 11px; }
 .mid .mv { font-size: 36px; }
 .mid .c-sub, .mid .c-last { font-size: 13px; }
-.mid .note b { font-size: 12px; } .mid .note span { font-size: 13px; }
+.mid .note { padding: 9px 14px; } .mid .note b { font-size: 17px; } .mid .note span { font-size: 15px; }
 .mid .legend .lg-t, .mid .legend .lg-k { font-size: 15px; }
 .mid .rings { justify-content: space-around; }
 .mid .rc { flex-direction: column; gap: 4px; text-align: center; }
@@ -246,6 +245,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .srcbar #status { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .srcbar input { padding: 5px 8px; border-radius: 5px; border: 0; }
 .srcbar a { color: var(--beige); }
+.arow:not(.few):not(.mid) .note span { display: none; }
+.few .mv { font-size: 46px; } .few .mini { padding: 8px 16px; } .few .rings { margin: 4px 0 6px; } .few .hstrip { margin-top: 6px; padding-top: 6px; }
 </style>
 <script src="js/config.js"></script>
 <script src="js/reader.js"></script>

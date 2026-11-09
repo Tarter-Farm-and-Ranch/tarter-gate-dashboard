@@ -99,7 +99,7 @@ var Gate = Gate || {};
     const uplhPct = has(m.uplh) && m.goal ? Math.min(100, m.uplh / m.goal * 100) : 0;
     const prev = t.history.filter((h) => !h.now).slice(-1)[0];
     const notes = [];
-    if (m.noStd.length) notes.push(`<div class="note n-red"><b>${m.noStd.length} PART${m.noStd.length > 1 ? "S" : ""} · NO STANDARD</b><span>for ${esc(t.rg)} · add in Epicor</span></div>`);
+    if (m.noStd.length) notes.push(`<div class="note n-red"><b>${big || mid ? m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "") + " · NO STANDARD" : "NO STD · " + m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "")}</b><span>for ${esc(t.rg)} · add in Epicor</span></div>`);
     if (!m.ops) notes.push(`<div class="note n-amber"><b>ENTER # OF OPERATORS</b><span>to get % to goal</span></div>`);
     else if (m.downtime) notes.push(`<div class="note n-amber"><b>DOWNTIME · ${int(m.downtime)} MIN</b></div>`);
     const extra = m.made - m.schedMade;
@@ -112,9 +112,9 @@ var Gate = Gate || {};
       <div class="track"><i class="bg-${b === "none" ? "none" : b} stripes" style="width:${uplhPct.toFixed(0)}%"></i></div>
     </div>
     <div class="rings">
-      <div class="rc">${ring(m.eff, rs, COLOR[b])}<div class="rl">TO${mid ? " " : "<br>"}GOAL</div></div>
-      <div class="rdiv"></div>
       <div class="rc">${ring(m.adherence, rs, COLOR[sb])}<div class="rl">SCHED.${mid ? " " : "<br>"}DONE</div></div>
+      <div class="rdiv"></div>
+      <div class="rc">${ring(m.eff, rs, COLOR[b])}<div class="rl">TO${mid ? " " : "<br>"}GOAL</div></div>
     </div>
     <div class="duo"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div></div>
     ${notes.length ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
@@ -183,7 +183,7 @@ var Gate = Gate || {};
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
     };
     // Cell names: big with few cards across, smaller as more cards share the row.
-    const nameSize = (across) => ({ 1: 80, 2: 70, 3: 60, 4: 52, 5: 42, 6: 36, 7: 32 })[across] || 26;
+    const nameSize = (across) => ({ 1: 76, 2: 64, 3: 56, 4: 50, 5: 42, 6: 36, 7: 32 })[across] || 26;
     const oneRow = (size) => {
       // One row: no legend card (it left a mostly empty column); the colors go in a line
       // at the end of the area titles.
@@ -223,7 +223,6 @@ var Gate = Gate || {};
     const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL", `${p.cellsWithData} of ${total} cells reporting`)
       + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE", `Avg done · ${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
       + kpi(int(p.ops), "OPERATORS", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
-      + kpi(`<span class="${p.downtime ? "t-behind" : ""}">${int(p.downtime)}</span><small>min</small>`, "DOWNTIME", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
       + shiftLeftKpi(view);
     return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, opts)}
   <main class="plant"><div class="kpis">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
