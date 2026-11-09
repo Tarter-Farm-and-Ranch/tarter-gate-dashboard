@@ -86,7 +86,7 @@ var Gate = Gate || {};
   function tile(t, view, size) {
     const m = t.m;
     const big = size === "big", mid = size === "mid";
-    const rs = big ? 104 : mid ? 96 : 66;
+    const rs = big ? 92 : mid ? 96 : 66;
     if (!t.hasFile || !m) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -100,7 +100,17 @@ var Gate = Gate || {};
     const notes = [];
     if (m.noStd.length) notes.push(`<div class="note n-red"><b>${big || mid ? m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "") + " · NO STANDARD" : "NO STD · " + m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "")}</b><span>for ${esc(t.rg)} · add in Epicor</span></div>`);
     if (!m.ops) notes.push(`<div class="note n-amber"><b>ENTER # OF OPERATORS</b><span>to get % to goal</span></div>`);
-    else if (m.downtime && !(big && m.forecast)) notes.push(`<div class="note n-amber"><b>DOWNTIME · ${int(m.downtime)} MIN</b></div>`);
+    else if (m.downtime && !big) notes.push(`<div class="note n-amber"><b>DOWNTIME · ${int(m.downtime)} MIN</b></div>`);
+    const comments = t.block ? t.block.parts.filter((p) => p.comment) : [];
+    let commentsBox = "";
+    if (big || mid) {
+      const lines = comments.slice(0, big ? 3 : 2).map((p) => `<div class="cm-l"><b>${esc(p.part)}</b><span>${esc(p.comment)}</span></div>`).join("");
+      const more = comments.length - (big ? 3 : 2);
+      if (mid && !comments.length) commentsBox = "";
+      else commentsBox = `<div class="cmts${comments.length ? "" : " cmts-empty"}"><div class="cm-h">${mid ? "COMMENTS" : "COMMENTS · " + esc(view.shift.label)}</div>${lines || '<div class="cm-none">No comments. Type text in ACTUAL (e.g. "waiting on material") and it shows here.</div>'}${more > 0 ? `<div class="cm-more">+${more} more</div>` : ""}</div>`;
+    } else if (comments.length) {
+      notes.push(`<div class="note n-blue"><b>${comments.length} COMMENT${comments.length > 1 ? "S" : ""}</b><span>${esc(comments[0].part + ": " + comments[0].comment)}</span></div>`);
+    }
     const extra = m.made - m.schedMade;
     return `<div class="card tb-${b}">
     <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -115,12 +125,13 @@ var Gate = Gate || {};
       <div class="rdiv"></div>
       <div class="rc">${ring(m.eff, rs, COLOR[b])}<div class="rl">TO${mid ? " " : "<br>"}GOAL</div></div>
     </div>
-    <div class="duo"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div></div>
-    ${notes.length ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
+    <div class="duo${big ? " trio3" : ""}"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div>${big ? `<div class="mini ${m.downtime ? "m-amber" : ""}"><div class="ml">DOWNTIME</div><div class="mv">${int(m.downtime)}<small>min</small></div></div>` : ""}</div>
+    ${notes.length || big ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
     ${big ? paceRow(m, view) : ""}
     ${big || mid ? partsList(t.block, view, mid) : ""}
     <div class="grow"></div>
-    ${mid ? histStrip(t, 4) : ""}
+    ${commentsBox}
+    ${mid && !comments.length ? histStrip(t, 4) : ""}
     ${notes.slice(0, big || mid ? 2 : 1).join("")}
     ${big || mid || m.noStd.length ? "" : `<div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>`}
   </div>`;
@@ -153,7 +164,6 @@ var Gate = Gate || {};
     return `<div class="pace">
       <div class="pc"><div class="ml">${s.running ? "AT THIS PACE" : "SHIFT ENDED AT"}</div><div class="mv t-${projB}">${proj}<small>/ ${int(m.forecast)}</small></div><div class="ps">${s.running ? "by " + hhmm(s.start + s.minutes) : "scheduled pieces"}</div></div>
       <div class="pc"><div class="ml">${s.running ? "NEEDED / HR" : "LEFT"}</div><div class="mv">${need}</div><div class="ps">${needSub}</div></div>
-      <div class="pc"><div class="ml">DOWNTIME</div><div class="mv ${m.downtime ? "t-behind" : ""}">${int(m.downtime)}<small>min</small></div><div class="ps">this shift</div></div>
     </div>`;
   }
 
@@ -205,7 +215,7 @@ var Gate = Gate || {};
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
     };
     // Cell names: big with few cards across, smaller as more cards share the row.
-    const nameSize = (across) => ({ 1: 76, 2: 64, 3: 56, 4: 50, 5: 42, 6: 36, 7: 32 })[across] || 26;
+    const nameSize = (across) => ({ 1: 68, 2: 56, 3: 50, 4: 46, 5: 42, 6: 36, 7: 32 })[across] || 26;
     const oneRow = (size) => {
       // One row: no legend card (it left a mostly empty column); the colors go in a line
       // at the end of the area titles.
@@ -276,7 +286,7 @@ var Gate = Gate || {};
       const done = p.forecast ? (p.actual || 0) / p.forecast : null;
       const pb = done === null ? "none" : band(fraction ? Math.round(done / fraction * 100) : 0);
       return pre + `<div class="prow ${ok ? "" : "prow-red"}">
-      <span class="pn">${esc(p.part)}</span><span class="pd">${esc(p.desc)}</span>
+      <span class="pn">${esc(p.part)}</span><span class="pd">${p.comment ? `<i class="pcm">💬 ${esc(p.comment)}</i>` : esc(p.desc)}</span>
       <span class="pf">${p.forecast === null ? "—" : int(p.forecast)}</span><span class="pa">${p.actual === null ? "—" : int(p.actual)}</span>
       <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span>
       <span class="ps ${ok ? "" : "t-off"}">${ok ? +p.std.toFixed(2) : "NO STD"}</span><span class="ps ${ok ? "" : "t-off"}">${ok ? p.crew : "—"}</span>

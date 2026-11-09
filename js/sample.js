@@ -57,6 +57,10 @@ G.sampleData = function (now) {
         n++;
       }
     }
+    if (name === "TK1" || name === "E-Coat") {
+      const b = weeks[G.mondayOf(shift.dayISO)][shift.key];
+      b.parts[1] = Object.assign({}, b.parts[1], { actual: null, comment: name === "TK1" ? "Waiting on material" : "Line down 20 min, chain" });
+    }
     cells[name] = { rg: spec[0], site: "MfgSys", title: name, weeks, warnings: [], savedAt: new Date((now || new Date()).getTime() - (2 + i * 3) * 60e3).toISOString() };
   }
   return { cells };

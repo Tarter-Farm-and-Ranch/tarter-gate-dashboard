@@ -195,7 +195,10 @@ var Gate = Gate || {};
         const part = norm(cellValue(ws, c0, r));
         if (!part) continue;
         const forecast = sched ? num(cellValue(ws, c0 + 1, r)) : null;
-        const actual = num(cellValue(ws, c0 + 4, r));
+        const rawActual = cellValue(ws, c0 + 4, r);
+        const actual = num(rawActual);
+        // Text typed in ACTUAL ("waiting on material") is a comment for the card, not a count.
+        const comment = actual === null && typeof rawActual === "string" && rawActual.trim() ? rawActual.trim().slice(0, 80) : "";
         // Standards from the export when it's there (doesn't depend on Excel having
         // recalculated the link); otherwise the values the workbook shows.
         let std = num(cellValue(ws, c0 + 2, r)) || 0;
@@ -207,10 +210,12 @@ var Gate = Gate || {};
           crew = s ? s.crew : 0;
           desc = s ? s.desc : "";
         }
-        block.parts.push({ part, desc, forecast, actual, std, crew, sched });
+        const row = { part, desc, forecast, actual, std, crew, sched };
+        if (comment) row.comment = comment;
+        block.parts.push(row);
       }
     }
-    const empty = block.ops === null && block.parts.every((p) => p.actual === null && p.forecast === null);
+    const empty = block.ops === null && block.parts.every((p) => p.actual === null && p.forecast === null && !p.comment);
     return empty ? null : block;
   }
 

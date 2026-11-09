@@ -40,18 +40,21 @@ XLSX.utils.book_append_sheet(wb, weekSheet(XLSX, ["11/09/2026", "LRC2", "TK#1", 
   { top: 34, k: 0, ops: 1, hours: 9.5, downtime: 0, parts: [[1002767, 400, 300]] }
 ]), "11-9-26");
 const ws = wb.Sheets["11-9-26"];
-ws.C7 = { t: "e", v: 42, w: "#N/A" }; // a #N/A standard in the sheet must not read as 42
+ws.A7 = { t: "n", v: 1002760 }; ws.E7 = { t: "s", v: " waiting on material " }; // text in ACTUAL of the second part
+ws.C8 = { t: "e", v: 42, w: "#N/A" }; ws.A8 = { t: "s", v: "ERRPART" }; // a #N/A standard in the sheet must not read as 42
 const cell = G.readCellWorkbook(open(wb), "Weld/TK1 Weekly Production.xlsx", std, ["2026-11-09"]);
 assert.equal(cell.cell, "TK1");
 assert.equal(cell.rg, "LRC2");
 const mon1 = cell.weeks["2026-11-09"]["0-1st"];
 const mon2 = cell.weeks["2026-11-09"]["0-2nd"];
-assert.equal(mon1.parts.length, 2);
 assert.equal(mon1.parts[0].std, 80);
-assert.equal(mon1.parts[1].sched, false);
+assert.equal(mon1.parts[3].sched, false);
 assert.equal(mon2.parts[0].actual, 300);
+assert.equal(mon1.parts.length, 4, "a part with only a comment is still read");
+assert.equal(mon1.parts[1].comment, "waiting on material", "text in ACTUAL is a comment");
+assert.equal(mon1.parts[1].actual, null);
 const noStdFile = G.readCellWorkbook(open(wb), "TK1 Weekly Production.xlsx", null, ["2026-11-09"]);
-assert.equal(noStdFile.weeks["2026-11-09"]["0-1st"].parts[0].std, 0, "error cells read as empty");
+assert.equal(noStdFile.weeks["2026-11-09"]["0-1st"].parts[2].std, 0, "error cells read as empty");
 
 // --- Metrics: earned hours / paid hours; a part without standard is flagged, not counted
 const m = G.blockMetrics(mon1, 1);
