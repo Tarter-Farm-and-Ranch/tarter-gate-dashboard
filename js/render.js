@@ -190,7 +190,7 @@ var Gate = Gate || {};
 
   // Parts without a standard are counted in the red note, not listed, so a long list of
   // them can't push the card off the screen; the rest are cut at what fits, with "+N more".
-  const BIG_CARD_PARTS = 3;
+  const BIG_CARD_PARTS = 5;
   const MID_CARD_PARTS = 6;
   function partsList(block, view, compact) {
     const all = block ? block.parts.filter((p) => p.std > 0 && p.crew > 0) : [];
