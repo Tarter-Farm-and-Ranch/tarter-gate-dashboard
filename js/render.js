@@ -140,7 +140,7 @@ var Gate = Gate || {};
         <span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
         <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
     }).join("");
-    return `<div class="plist"><div class="pl-h"><span>PARTS THIS SHIFT</span><span>ACTUAL / FORECAST</span></div>${rows}${more > 0 ? `<div class="pl-more">+${more} more part${more > 1 ? "s" : ""}</div>` : ""}</div>`;
+    return `<div class="plist"><div class="pl-h"><span>PARTS · ${esc(view.shift.label)}${view.shift.running ? "" : " (ENDED)"}</span><span>ACTUAL / FORECAST</span></div>${rows}${more > 0 ? `<div class="pl-more">+${more} more part${more > 1 ? "s" : ""}</div>` : ""}</div>`;
   }
 
   G.renderPlant = function (view, now, opts) {
@@ -252,7 +252,7 @@ var Gate = Gate || {};
       </div>
     </section>
     <section class="cright">
-      <div class="card parts"><div class="ph">PARTS THIS SHIFT</div>
+      <div class="card parts"><div class="ph">PARTS · ${esc(view.shift.label)} · ${hhmm(view.shift.start)} – ${hhmm(view.shift.start + view.shift.minutes)}${view.shift.running ? "" : " (ENDED)"}</div>
         <div class="phead"><span>PART #</span><span>DESCRIPTION (EPICOR)</span><span>FORECAST</span><span>ACTUAL</span><span>PROGRESS</span><span>STD /HR</span><span>CREW</span><span>STATUS</span></div>
         ${rows || '<div class="muted pad">Nothing entered for this shift yet.</div>'}${moreParts > 0 ? `<div class="pl-more">+${moreParts} more part${moreParts > 1 ? "s" : ""} in the workbook</div>` : ""}<div class="grow"></div>${flag}</div>
       <div class="card hist"><div class="hh"><b>LAST SHIFTS · TO GOAL</b><span>From this week's and last week's tabs</span></div><div class="hcols">${hist}</div></div>
