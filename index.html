@@ -201,6 +201,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .srcbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #0F172A; color: #E2E8F0; font: 600 15px Inter, "Segoe UI", sans-serif; z-index: 10; border-top: 3px solid var(--red); }
 .srcbar[hidden] { display: none; }
 .srcbar button { background: var(--red); color: #fff; border: 0; border-radius: 6px; padding: 7px 14px; font: 800 13px Inter, sans-serif; letter-spacing: .06em; cursor: pointer; }
+.srcbar button.ghost { background: transparent; border: 1px solid rgba(255,255,255,.45); }
+.srcbar button[hidden] { display: none; }
 .srcbar button.warn { background: #F59E0B; color: #111827; }
 .srcbar #status { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .srcbar input { padding: 5px 8px; border-radius: 5px; border: 0; }
@@ -218,6 +220,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 <div id="root"></div>
 <div id="bar" class="srcbar" hidden>
   <button id="connect" type="button">CONNECT FOLDER</button>
+  <button id="sync" type="button" class="ghost" hidden>SYNC NOW</button>
+  <button id="change" type="button" class="ghost" hidden>CHANGE FOLDER</button>
   <span id="status">Choose the Production Reporting folder (synced with OneDrive) to start.</span>
   <span id="keyRow" hidden>
     <label for="key">Publish key</label>

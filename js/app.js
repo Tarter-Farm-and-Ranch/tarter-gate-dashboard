@@ -210,7 +210,7 @@
       if (!res.ok) throw new Error("HTTP " + res.status + " " + (await res.text()).slice(0, 120));
       source.publishedBody = body;
       source.publishedAt = t;
-      state.status += " · TVs updated " + new Date().toLocaleTimeString("en-US");
+      state.status += " · TVs updated " + new Date().toLocaleTimeString("en-US", { timeZone: PLANT.timeZone, hour: "numeric", minute: "2-digit", second: "2-digit" });
     } catch (err) {
       state.status += " · TVs NOT updated: " + errText(err);
     }
@@ -222,21 +222,52 @@
     state.status = "Click RECONNECT FOLDER to give the browser access again (Windows restarted or the tab was closed).";
   }
 
+  function showConnected(dir) {
+    $("connect").textContent = "CONNECTED: " + dir.name;
+    $("connect").classList.remove("warn");
+    $("change").hidden = false;
+    $("sync").hidden = false;
+  }
+
+  /** First connection, or "Reconnect" after a restart: the same folder, access granted again. */
   async function connect() {
     try {
-      let dir = source.dir;
-      if (!(dir && (await dir.requestPermission({ mode: "read" })) === "granted")) {
-        dir = await showDirectoryPicker({ id: "tarter-gate", mode: "read" });
-        await idb("readwrite", (s) => s.put(dir, "folder"));
+      if (source.dir && (await source.dir.requestPermission({ mode: "read" })) === "granted") {
+        showConnected(source.dir);
+        await tick();
+        return;
       }
-      source.dir = dir;
-      $("connect").textContent = "CONNECTED: " + dir.name;
-      $("connect").classList.remove("warn");
-      await tick();
+      await pickFolder();
     } catch (err) {
       state.status = "Folder not connected: " + errText(err);
       paintStatus();
     }
+  }
+
+  /** Choose a (different) folder: always opens the folder picker. */
+  async function pickFolder() {
+    try {
+      const dir = await showDirectoryPicker({ id: "tarter-gate", mode: "read" });
+      await idb("readwrite", (s) => s.put(dir, "folder"));
+      source.dir = dir;
+      source.cache = {};
+      source.publishedBody = "";
+      showConnected(dir);
+      await tick();
+    } catch (err) {
+      if (err && err.name === "AbortError") return; // picker closed: keep the folder there was
+      state.status = "Folder not changed: " + errText(err);
+      paintStatus();
+    }
+  }
+
+  /** Read every workbook again right now and send the TVs the result. */
+  async function syncNow() {
+    source.cache = {};
+    source.publishedBody = "";
+    state.status = "Reading the folder…";
+    paintStatus();
+    await tick();
   }
 
   function paintStatus() {
@@ -284,6 +315,8 @@
       // Only the source PC reads Excel files, so only it downloads the Excel reader.
       await loadScript("vendor/xlsx.js");
       $("connect").addEventListener("click", connect);
+      $("change").addEventListener("click", pickFolder);
+      $("sync").addEventListener("click", syncNow);
       $("saveKey").addEventListener("click", () => {
         try { localStorage.setItem(KEY_LS, $("key").value.trim()); } catch (e) {}
         $("keyRow").hidden = true;
@@ -295,8 +328,8 @@
         const saved = await idb("readonly", (s) => s.get("folder"));
         if (saved) {
           source.dir = saved;
-          if ((await saved.queryPermission({ mode: "read" })) === "granted") $("connect").textContent = "CONNECTED: " + saved.name;
-          else showReconnect();
+          if ((await saved.queryPermission({ mode: "read" })) === "granted") showConnected(saved);
+          else { showReconnect(); $("change").hidden = false; }
         }
       } catch (e) {}
       if ("wakeLock" in navigator) navigator.wakeLock.request("screen").catch(() => {});
