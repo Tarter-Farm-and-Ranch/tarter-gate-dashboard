@@ -78,7 +78,7 @@ var Gate = Gate || {};
     const s = view.shift;
     const name = s.shift === "wknd" ? "Weekend" : s.shift + " shift";
     if (!s.running) return kpi("ENDED", "LAST SHIFT", name + " · " + hhmm(s.start) + " – " + hhmm(s.start + s.minutes), "kpi-dark");
-    const sub = name + "<br>ends " + hhmm(s.start + s.minutes);
+    const sub = hhmm(s.start) + " – " + hhmm(s.start + s.minutes);
     const h = Math.floor(s.minutesLeft / 60), m = Math.round(s.minutesLeft % 60);
     return kpi(h ? `${h}h ${m}m` : `${m}m`, "SHIFT LEFT", sub, "kpi-dark");
   }
@@ -220,11 +220,16 @@ var Gate = Gate || {};
     const rowsHtml = few ? oneRow("big") : mid ? oneRow("mid") : twoRows();
     const effBand = band(p.eff);
     const total = p.cellsShown;
-    const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL", `${p.cellsWithData} of ${total} cells reporting`)
-      + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE", `Avg done · ${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
-      + kpi(int(p.ops), "OPERATORS", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
+    // Like West's row: the number, a title and two short lines under it.
+    const withEff = view.tiles.filter((t) => t.shown && t.m && has(t.m.eff));
+    const lowest = withEff.slice().sort((a, b) => a.m.eff - b.m.eff)[0];
+    const cellsLine = few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : p.cellsShown + " cells";
+    const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL",
+        `${p.cellsWithData} of ${total} cells reporting` + (lowest && withEff.length > 1 ? `<br>Lowest: ${esc(lowest.name)} <b class="t-${band(lowest.m.eff)}">${lowest.m.eff}%</b>` : ""))
+      + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE DONE", `Avg of ${cellsLine}<br>${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
+      + kpi(int(p.ops), "OPERATORS", `This shift<br>${esc(cellsLine)}`)
       + shiftLeftKpi(view);
-    return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, opts)}
+    return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION DASHBOARD · " + PLANT.name.toUpperCase().replace(/^TARTER /, "") }, opts)}
   <main class="plant"><div class="kpis">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
   };
 
@@ -260,7 +265,7 @@ var Gate = Gate || {};
     const flag = m && m.noStd.length ? `<div class="note n-red wide"><b>${m.noStd.length} PART${m.noStd.length > 1 ? "S" : ""} WITH NO ${esc(t.rg)} STANDARD IN EPICOR</b><span>${esc(listed)} · not counted in the goal: add ${m.noStd.length > 1 ? "them" : "it"} in Epicor</span></div>` : "";
     const uplhPct = m && has(m.uplh) && m.goal ? Math.min(100, m.uplh / m.goal * 100) : 0;
     const hoursPlan = t.block && t.block.hours ? t.block.hours : PLANT.shifts[view.shift.shift].hours;
-    return `<div class="screen">${header(view, now, { top: t.name.toUpperCase() + (t.rg ? " · " + t.rg : ""), bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, Object.assign({ shiftInHeader: true }, opts))}
+    return `<div class="screen">${header(view, now, { top: t.name.toUpperCase() + (t.rg ? " · " + t.rg : ""), bottom: "DAILY PRODUCTION DASHBOARD · " + PLANT.name.toUpperCase().replace(/^TARTER /, "") }, Object.assign({ shiftInHeader: true }, opts))}
   <main class="cell">
     <section class="card cleft tb-${b}">
       <div class="bigring">${ring(m ? m.eff : null, 250, COLOR[b])}
@@ -292,6 +297,6 @@ var Gate = Gate || {};
 
   G.renderWaiting = function (now, text, opts) {
     const fake = { shift: { label: "", start: 0, minutes: 0, running: false } };
-    return `<div class="screen">${header(fake, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, opts || {})}<div class="waiting">${esc(text)}</div></div>`;
+    return `<div class="screen">${header(fake, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION DASHBOARD · " + PLANT.name.toUpperCase().replace(/^TARTER /, "") }, opts || {})}<div class="waiting">${esc(text)}</div></div>`;
   };
 })(Gate);
