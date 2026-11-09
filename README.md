@@ -9,6 +9,11 @@ each work cell fills in during the shift. Same look as the West dashboard.
   folder, column SHOW ON TV = YES (read like the workbooks, so it works on Vercel and in
   the portal; add it to the portal feed's files). Without that file, `PLANT.showCells` in
   `js/config.js`. With four cells or fewer they are big cards with their parts.
+  The same file can hold EXPECTED OPERATORS per cell (top tile shows present / expected)
+  and a Safety tab (LAST RECORDABLE date, TOPIC) for the green safety tile.
+- **Comments:** text typed in a part's ACTUAL cell ("waiting on material") shows in the
+  card's COMMENTS box instead of being counted.
+- **▶ NOW:** the part whose ACTUAL went up most since the workbook's last save.
 - **One cell** (`?cell=TK1`): the cell's parts this shift with forecast, actual, standard
   and crew, plus its last shifts.
 - **Preview** (`?preview=1`, `?preview=1&cell=AWL1`): sample data, nothing read or published.

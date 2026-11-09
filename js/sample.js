@@ -63,6 +63,11 @@ G.sampleData = function (now) {
     }
     cells[name] = { rg: spec[0], site: "MfgSys", title: name, weeks, warnings: [], savedAt: new Date((now || new Date()).getTime() - (2 + i * 3) * 60e3).toISOString() };
   }
-  return { cells };
+  for (const name of Object.keys(cells)) {
+    const b = cells[name].weeks[G.mondayOf(shift.dayISO)][shift.key];
+    if (b) b.nowPart = b.parts[0].part;
+  }
+  const last = G.addDays(clock.iso, -124);
+  return { cells, expected: { TK1: 2, TK2: 2, "Manual Weld": 6, K9: 4 }, safety: { lastRecordable: last, topic: "Ladder Safety" } };
 };
 })(Gate);

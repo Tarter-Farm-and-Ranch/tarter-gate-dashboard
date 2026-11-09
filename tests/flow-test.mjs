@@ -76,6 +76,9 @@ try {
     await page.waitForSelector(".chip-sample");
     assert.equal(await page.locator(".tiles .card").count(), 2);
     assert.match(await page.textContent(".tiles .card"), /COMMENTS[\s\S]*Waiting on material/, "text typed in ACTUAL shows as a comment");
+    assert.match(await page.textContent(".kpi-safe"), /124\s*DAYS WITHOUT\s*A RECORDABLE[\s\S]*Ladder Safety/, "safety tile from Dashboard Settings");
+    assert.match(await page.textContent(".kpis"), /PERSONNEL[\s\S]*TK1: 1 missing/, "present / expected");
+    assert.equal(await page.locator(".tiles .card").first().locator(".nowb").count(), 1, "the part running now is marked");
     assert.match(await page.textContent(".tiles .card .c-saved"), /^SAVED \d{1,2}:\d\d [AP]M$/, "each card says when its workbook was saved");
     await page.goto(base + "/?preview=1&cell=AWL1");
     await page.waitForSelector(".cleft");

@@ -130,7 +130,11 @@ XLSX.utils.book_append_sheet(setWb, XLSX.utils.aoa_to_sheet([
   ["AREA", "CELL", "SHOW ON TV"],
   ["WELD", "TK1", "YES"], ["WELD", "tk2", "yes"], ["WELD", "K9", "NO"], ["FINISH", "E-Coat", "Y"], ["?", "Laser 9", "YES"], ["WELD", "AMI", ""]
 ]), "Cells");
+setWb.Sheets.Cells.D3 = { t: "s", v: "EXPECTED OPERATORS" }; setWb.Sheets.Cells.D4 = { t: "n", v: 2 }; setWb.Sheets.Cells["!ref"] = "A1:D9";
+XLSX.utils.book_append_sheet(setWb, XLSX.utils.aoa_to_sheet([["SAFETY"], ["Last recordable", 46157], ["Today's topic", "Ladder Safety"]]), "Safety");
 const settings = G.readSettings(open(setWb));
+assert.deepEqual(settings.expected, { TK1: 2 }, "EXPECTED OPERATORS per cell");
+assert.deepEqual(settings.safety, { lastRecordable: "2026-05-15", topic: "Ladder Safety" }, "Safety tab: date (Excel serial) and topic");
 assert.deepEqual([...settings.showCells], ["TK1", "TK2", "E-Coat"], "YES / Y, any case; NO and blank are off");
 assert.deepEqual([...settings.unknown], ["Laser 9"]);
 r = await G.collect([files[0], files[1], file("Dashboard Settings.xlsx", setWb)], {}, now);
@@ -146,5 +150,23 @@ XLSX.utils.book_append_sheet(offWb, XLSX.utils.aoa_to_sheet([["CELL", "SHOW"], [
 r = await G.collect([files[1], file("Dashboard Settings.xlsx", offWb)], {}, now);
 assert.equal(r.data.showCells, null, "nothing set to YES: PLANT.showCells, with a warning");
 assert.ok(r.warnings.some((w) => /no cell set to YES/.test(w)));
+
+// --- the part being made now: the one whose ACTUAL went up since the last read
+{
+  const w2 = XLSX.utils.book_new();
+  const mk = (a1, a2) => weekSheet(XLSX, ["11/09/2026", "LRC2", "TK#1", "", "MfgSys"], [{ top: 1, k: 0, ops: 1, hours: 10.5, downtime: 0, parts: [[1002767, 500, a1], [1002760, 200, a2]] }]);
+  XLSX.utils.book_append_sheet(w2, mk(100, 50), "11-9-26");
+  const c2 = {};
+  const f1 = { name: "TK1 Weekly Production.xlsx", sig: "s1", modified: 1, load: () => open(w2) };
+  let rr = await G.collect([f1], c2, now);
+  assert.equal(rr.data.cells.TK1.weeks["2026-11-09"]["0-1st"].nowPart, undefined, "nothing to compare yet");
+  const w3 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w3, mk(100, 80), "11-9-26");
+  rr = await G.collect([{ name: f1.name, sig: "s2", modified: 2, load: () => open(w3) }], c2, now);
+  assert.equal(rr.data.cells.TK1.weeks["2026-11-09"]["0-1st"].nowPart, "1002760", "the part that went up is running");
+  rr = await G.collect([{ name: f1.name, sig: "s3", modified: 3, load: () => open(w3) }], c2, now);
+  assert.equal(rr.data.cells.TK1.weeks["2026-11-09"]["0-1st"].nowPart, "1002760", "kept until another part goes up");
+  const fresh = await G.collect([{ name: f1.name, sig: "s4", modified: 4, load: () => open(w2) }], {}, now, { TK1: { weeks: { "2026-11-09": { "0-1st": { parts: [{ part: "1002767", actual: 90 }, { part: "1002760", actual: 50 }], nowPart: "1002760" } } } } });
+  assert.equal(fresh.data.cells.TK1.weeks["2026-11-09"]["0-1st"].nowPart, "1002767", "compared with the previous snapshot (portal)");
+}
 
 console.log("core-test: ok");

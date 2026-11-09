@@ -74,6 +74,28 @@ var Gate = Gate || {};
     return `<div class="kpi ${cls || ""}"><div class="kv">${num}</div><div class="kt"><div class="kl">${title}</div><div class="ks">${sub}</div></div></div>`;
   }
 
+  /** Green tile like West's: days since the last recordable and today's topic (Dashboard Settings, Safety tab). */
+  function safetyKpi(view, now) {
+    const sf = view.safety;
+    if (!sf || (!sf.lastRecordable && !sf.topic)) return "";
+    const today = Date.parse(view.clock.iso + "T00:00:00Z");
+    const last = Date.parse(sf.lastRecordable + "T00:00:00Z");
+    const days = Number.isFinite(last) ? Math.max(0, Math.round((today - last) / 864e5)) : null;
+    return `<div class="kpi kpi-safe">${days === null ? "" : `<div class="kv">${days}</div><div class="kt"><div class="kl">DAYS WITHOUT<br>A RECORDABLE</div></div>`}${sf.topic ? `<div class="topic"><span>TODAY'S TOPIC</span><b>${esc(sf.topic)}</b></div>` : ""}</div>`;
+  }
+
+  /** OPERATORS, or PERSONNEL present / expected when Dashboard Settings has EXPECTED OPERATORS. */
+  function personnelKpi(view, cellsLine) {
+    const shown = view.tiles.filter((t) => t.shown);
+    const withExp = shown.filter((t) => view.expected[t.name] > 0);
+    const ops = shown.reduce((n, t) => n + (t.m ? t.m.ops : 0), 0);
+    if (!withExp.length) return kpi(int(ops), "OPERATORS", `This shift<br>${esc(cellsLine)}`);
+    const exp = withExp.reduce((n, t) => n + view.expected[t.name], 0);
+    const short = withExp.filter((t) => t.m && t.m.ops < view.expected[t.name]).map((t) => esc(t.name) + ": " + (view.expected[t.name] - t.m.ops) + " missing");
+    return kpi(`<span class="${ops < exp ? "t-off" : ""}">${int(ops)}</span><small class="of">/${int(exp)}</small>`, "PERSONNEL",
+      `Present / expected<br>${short.length ? `<b class="t-off">${short.slice(0, 2).join(" · ")}</b>` : "Every cell staffed"}`);
+  }
+
   function shiftLeftKpi(view) {
     const s = view.shift;
     if (!s.running) return kpi("ENDED", esc(s.label), hhmm(s.start) + " – " + hhmm(s.start + s.minutes), "kpi-dark");
@@ -114,7 +136,7 @@ var Gate = Gate || {};
     const extra = m.made - m.schedMade;
     return `<div class="card tb-${b}">
     <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
-    <div class="c-meta"><span class="pill">${PERSON}${int(m.ops)}</span>${mid ? "" : `<span class="c-rg">${esc(t.rg)}</span>`}${big || mid ? saved(t, view.now) : ""}<span class="grow"></span>${SHORT_CHIP[b] ? `<span class="chip ch-${b}">${mid ? SHORT_CHIP[b].split(" ")[0] : SHORT_CHIP[b]}</span>` : ""}</div>
+    <div class="c-meta"><span class="pill${view.expected[t.name] > m.ops ? " pill-short" : ""}">${PERSON}${int(m.ops)}${view.expected[t.name] ? `<small>/${int(view.expected[t.name])}</small>` : ""}</span>${mid ? "" : `<span class="c-rg">${esc(t.rg)}</span>`}${big || mid ? saved(t, view.now) : ""}<span class="grow"></span>${SHORT_CHIP[b] ? `<span class="chip ch-${b}">${mid ? SHORT_CHIP[b].split(" ")[0] : SHORT_CHIP[b]}</span>` : ""}</div>
     <div class="hero h-${b}">
       <div class="h-l">UPLH THIS SHIFT</div>
       <div class="h-v"><b>${fix1(m.uplh)}</b><span>/ ${fix1(m.goal)} <em>GOAL</em></span></div>
@@ -182,10 +204,11 @@ var Gate = Gate || {};
       const done = p.forecast ? (p.actual || 0) / p.forecast : null;
       const pb = done === null ? "none" : band(fraction ? Math.round(done / fraction * 100) : 0);
       if (compact) {
-        return `<div class="pl-row pl-c"><span class="pl-n">${esc(p.part)}</span><span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
+        return `<div class="pl-row pl-c${block.nowPart === p.part ? " pl-now" : ""}"><span class="pl-n">${block.nowPart === p.part ? '<em class="nowb">▶</em>' : ""}${esc(p.part)}</span><span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
         <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
       }
-      return `<div class="pl-row ${ok ? "" : "pl-red"}"><span class="pl-n">${esc(p.part)}</span><span class="pl-d">${esc(p.desc || (ok ? "" : "No standard in Epicor"))}</span>
+      const now = block.nowPart === p.part;
+      return `<div class="pl-row ${ok ? "" : "pl-red"}${now ? " pl-now" : ""}"><span class="pl-n">${now ? '<em class="nowb">▶ NOW</em>' : ""}${esc(p.part)}</span><span class="pl-d">${esc(p.desc || (ok ? "" : "No standard in Epicor"))}</span>
         <span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
         <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
     }).join("");
@@ -219,7 +242,8 @@ var Gate = Gate || {};
     const oneRow = (size) => {
       // One row: no legend card (it left a mostly empty column); the colors go in a line
       // at the end of the area titles.
-      const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr))`;
+      // Big cards stay a bit narrower than the screen allows, centred: easier to read.
+      const cols = size === "big" ? `grid-template-columns:repeat(${shownCount}, minmax(0, ${shownCount === 1 ? 1000 : shownCount === 2 ? 800 : 1000}px));justify-content:center;column-gap:40px` : `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr))`;
       const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("");
       const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, size)).join("");
       return `<section class="arow ${size === "big" ? "few" : "mid"}" style="--cn:${nameSize(shownCount)}px"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
@@ -256,13 +280,13 @@ var Gate = Gate || {};
     const withEff = view.tiles.filter((t) => t.shown && t.m && has(t.m.eff));
     const lowest = withEff.slice().sort((a, b) => a.m.eff - b.m.eff)[0];
     const cellsLine = few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : p.cellsShown + " cells";
-    const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL",
+    const kpis = safetyKpi(view, now) + kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL",
         `${p.cellsWithData} of ${total} cells reporting` + (lowest && withEff.length > 1 ? `<br>Lowest: ${esc(lowest.name)} <b class="t-${band(lowest.m.eff)}">${lowest.m.eff}%</b>` : ""))
       + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE DONE", `Avg of ${cellsLine}<br>${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
-      + kpi(int(p.ops), "OPERATORS", `This shift<br>${esc(cellsLine)}`)
+      + personnelKpi(view, cellsLine)
       + shiftLeftKpi(view);
     return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION DASHBOARD · " + PLANT.name.toUpperCase().replace(/^TARTER /, "") }, opts)}
-  <main class="plant"><div class="kpis">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
+  <main class="plant"><div class="kpis${view.safety && (view.safety.lastRecordable || view.safety.topic) ? " kpis5" : ""}">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
   };
 
   G.renderCell = function (view, name, now, opts) {
@@ -286,7 +310,7 @@ var Gate = Gate || {};
       const done = p.forecast ? (p.actual || 0) / p.forecast : null;
       const pb = done === null ? "none" : band(fraction ? Math.round(done / fraction * 100) : 0);
       return pre + `<div class="prow ${ok ? "" : "prow-red"}">
-      <span class="pn">${esc(p.part)}</span><span class="pd">${p.comment ? `<i class="pcm">💬 ${esc(p.comment)}</i>` : esc(p.desc)}</span>
+      <span class="pn">${t.block && t.block.nowPart === p.part ? '<em class="nowb">▶ NOW</em>' : ""}${esc(p.part)}</span><span class="pd">${p.comment ? `<i class="pcm">💬 ${esc(p.comment)}</i>` : esc(p.desc)}</span>
       <span class="pf">${p.forecast === null ? "—" : int(p.forecast)}</span><span class="pa">${p.actual === null ? "—" : int(p.actual)}</span>
       <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span>
       <span class="ps ${ok ? "" : "t-off"}">${ok ? +p.std.toFixed(2) : "NO STD"}</span><span class="ps ${ok ? "" : "t-off"}">${ok ? p.crew : "—"}</span>

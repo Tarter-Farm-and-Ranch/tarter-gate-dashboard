@@ -150,6 +150,8 @@ var Gate = Gate || {};
     }
     return {
       now, clock, shift, tiles, shownAreas,
+      expected: data && data.expected ? data.expected : {},
+      safety: data && data.safety ? data.safety : null,
       plant: {
         eff: paid > 0 ? Math.round(earned / paid * 100) : null,
         adherence: adh.length ? Math.round(adh.reduce((a, b) => a + b, 0) / adh.length) : null,

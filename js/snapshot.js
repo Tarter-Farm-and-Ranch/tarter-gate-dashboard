@@ -16,17 +16,17 @@ async function buildGateSnapshot(manifestText, previousText) {
   const log = (t) => { try { if (typeof __log === "function") __log(t); } catch (e) {} };
   const nowMs = Date.parse(manifest.serverTime) || Date.now();
   const files = Gate.portalFiles(manifest, async (f) => JSON.parse(await __readFeedFile(f.url)));
-  let previous = null;
-  try { previous = previousText ? JSON.parse(previousText) : null; } catch (e) { previous = null; }
   const keepPrevious = (why) => {
     if (!previous || !previous.data || !previous.data.cells || !Object.keys(previous.data.cells).length) return null;
     previous.sourceError = why.slice(0, 200);
     return JSON.stringify(previous);
   };
 
+  let previous = null;
+  try { previous = previousText ? JSON.parse(previousText) : null; } catch (e) { previous = null; }
   let result;
   try {
-    result = await Gate.collect(files, {}, nowMs);
+    result = await Gate.collect(files, {}, nowMs, previous && previous.data && previous.data.cells);
   } catch (err) {
     const why = err && err.message ? err.message : String(err);
     log("Gate snapshot: " + why);

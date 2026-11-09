@@ -142,32 +142,76 @@ var Gate = Gate || {};
    * whose SHOW says YES (also Y, SI, X, TRUE, 1, ON) are on the all-cells screen.
    * -> { showCells: ["TK1", ...], unknown: [names that aren't cells in js/config.js] }
    */
+  /** An Excel date (serial number, Date, or "11/9/2026" / "2026-11-09") -> "2026-11-09", or "". */
+  function isoDate(v) {
+    if (v instanceof Date && Number.isFinite(v.getTime())) return v.getFullYear() + "-" + String(v.getMonth() + 1).padStart(2, "0") + "-" + String(v.getDate()).padStart(2, "0");
+    if (typeof v === "number" && v > 20000 && v < 80000) return new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5).toISOString().slice(0, 10);
+    const t = norm(v);
+    let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
+    if (m) return m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+    m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/.exec(t);
+    if (m) return (m[3].length === 2 ? "20" + m[3] : m[3]) + "-" + m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0");
+    return "";
+  }
+
+  /**
+   * Dashboard Settings.xlsx.
+   *   Cells sheet: a CELL column, a SHOW (ON TV) column (YES = on the all-cells screen) and,
+   *   optionally, EXPECTED OPERATORS per cell (shown as present / expected).
+   *   Safety sheet (optional): a "LAST RECORDABLE" label with the date next to it, and a
+   *   "TOPIC" label with today's toolbox topic next to it.
+   * -> { showCells, unknown, expected: { TK1: 2 }, safety: { lastRecordable, topic } | null }
+   */
   G.readSettings = function (wb) {
     const yes = /^(y|yes|si|sí|x|true|1|on)$/i;
+    let found = null;
+    let safety = null;
     for (const name of wb.SheetNames || Object.keys(wb.Sheets)) {
       const ws = wb.Sheets[name];
       const r = ws && (range(ws["!ref"]) || usedRange(ws));
       if (!r) continue;
-      for (let hr = r.r0; hr <= Math.min(r.r1, r.r0 + 10); hr++) {
-        let cc = -1, sc = -1;
+      if (/safety/i.test(name)) {
+        const out = { lastRecordable: "", topic: "" };
+        for (let row = r.r0; row <= r.r1; row++) {
+          for (let c = r.c0; c <= r.c1; c++) {
+            const h = norm(cellValue(ws, c, row)).toLowerCase();
+            if (!h) continue;
+            const right = cellValue(ws, c + 1, row);
+            if (!out.lastRecordable && /last.*(recordable|incident|injury)/.test(h)) out.lastRecordable = isoDate(right);
+            if (!out.topic && /topic/.test(h)) out.topic = norm(right).slice(0, 60);
+          }
+        }
+        if (out.lastRecordable || out.topic) safety = out;
+        continue;
+      }
+      if (found) continue;
+      for (let hr = r.r0; hr <= Math.min(r.r1, r.r0 + 10) && !found; hr++) {
+        let cc = -1, sc = -1, ec = -1;
         for (let c = r.c0; c <= r.c1; c++) {
           const h = norm(cellValue(ws, c, hr)).toLowerCase();
           if (cc < 0 && /^(cell|work cell|department|celda)$/.test(h)) cc = c;
           if (sc < 0 && /^(show|show on tv|on screen|mostrar)/.test(h)) sc = c;
+          if (ec < 0 && /expected/.test(h)) ec = c;
         }
         if (cc < 0 || sc < 0) continue;
-        const showCells = [], unknown = [];
+        const showCells = [], unknown = [], expected = {};
         for (let row = hr + 1; row <= r.r1; row++) {
           const raw = norm(cellValue(ws, cc, row));
-          if (!raw || !yes.test(norm(cellValue(ws, sc, row)))) continue;
+          if (!raw) continue;
           const known = G.allCells().find((c) => c.toLowerCase() === raw.toLowerCase());
+          const exp = ec > 0 ? num(cellValue(ws, ec, row)) : null;
+          if (known && exp !== null && exp > 0) expected[known] = exp;
+          if (!yes.test(norm(cellValue(ws, sc, row)))) continue;
           if (known) { if (showCells.indexOf(known) < 0) showCells.push(known); } else unknown.push(raw);
         }
-        return { showCells, unknown };
+        found = { showCells, unknown, expected };
       }
     }
-    throw new Error("no sheet with CELL and SHOW columns");
+    if (!found) throw new Error("no sheet with CELL and SHOW columns");
+    found.safety = safety;
+    return found;
   };
+
 
   /** "11-9-26" -> "2026-11-09" (tab names are the Monday of the week). */
   G.tabMonday = function (name) {
@@ -272,7 +316,33 @@ var Gate = Gate || {};
    * -> { data: { cells, timeZone, missingStandards, standardsSavedAt }, warnings: [], failed: [cells not read] }
    * A file that can't be read right now (OneDrive writing it) keeps its last good read.
    */
-  G.collect = async function (files, cache, nowMs) {
+  /**
+   * The part being made now, per shift block: the part whose ACTUAL went up the most since
+   * the last read of the workbook. Kept until another part goes up; nothing until the first
+   * change is seen (a screen just opened, a block just started).
+   */
+  function markNowRunning(cell, before) {
+    for (const w of Object.keys(cell.weeks)) {
+      for (const k of Object.keys(cell.weeks[w])) {
+        const blk = cell.weeks[w][k];
+        const old = before && before.weeks && before.weeks[w] && before.weeks[w][k];
+        if (!old) continue;
+        const was = {};
+        for (const p of old.parts || []) was[p.part] = p.actual || 0;
+        let best = null, up = 0;
+        for (const p of blk.parts) {
+          const d = (p.actual || 0) - (was[p.part] || 0);
+          if (d > up) { up = d; best = p.part; }
+        }
+        if (best) blk.nowPart = best;
+        else if (old.nowPart && blk.parts.some((p) => p.part === old.nowPart)) blk.nowPart = old.nowPart;
+      }
+    }
+  }
+
+  // prevCells: the cells of the last result built elsewhere (the portal's previous snapshot),
+  // so the part being made now carries over between snapshot builds.
+  G.collect = async function (files, cache, nowMs, prevCells) {
     const base = (n) => String(n).split(/[\\/]/).pop();
     const usable = files.filter((f) => /\.xlsx$/i.test(base(f.name)) && !G.SKIP_FILE.test(base(f.name)));
     const newestFirst = (a, b) => (b.modified || 0) - (a.modified || 0);
@@ -327,6 +397,7 @@ var Gate = Gate || {};
         try {
           const cell = G.readCellWorkbook(await f.load(), f.name, cache.standards, mondays);
           cell.savedAt = f.modified ? new Date(f.modified).toISOString() : "";
+          markNowRunning(cell, had ? had.cell : prevCells && prevCells[name]);
           cache.cells[name] = { key: k, cell };
         } catch (err) {
           warnings.push(name + ": can't read the workbook (" + (err && err.message ? err.message : err) + ")" + (had ? ", showing the last good read" : ""));
@@ -346,7 +417,9 @@ var Gate = Gate || {};
         missingStandards: !std,
         standardsSavedAt: std && std.modified ? new Date(std.modified).toISOString() : "",
         // null: no settings file (the screen uses PLANT.showCells).
-        showCells: cache.settings && cache.settings.showCells.length ? cache.settings.showCells.slice() : null
+        showCells: cache.settings && cache.settings.showCells.length ? cache.settings.showCells.slice() : null,
+        expected: cache.settings ? Object.assign({}, cache.settings.expected) : {},
+        safety: cache.settings ? cache.settings.safety : null
       },
       warnings,
       failed
