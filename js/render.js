@@ -76,11 +76,10 @@ var Gate = Gate || {};
 
   function shiftLeftKpi(view) {
     const s = view.shift;
-    const name = s.shift === "wknd" ? "Weekend" : s.shift + " shift";
-    if (!s.running) return kpi("ENDED", "LAST SHIFT", name + " · " + hhmm(s.start) + " – " + hhmm(s.start + s.minutes), "kpi-dark");
+    if (!s.running) return kpi("ENDED", esc(s.label), hhmm(s.start) + " – " + hhmm(s.start + s.minutes), "kpi-dark");
     const sub = hhmm(s.start) + " – " + hhmm(s.start + s.minutes);
     const h = Math.floor(s.minutesLeft / 60), m = Math.round(s.minutesLeft % 60);
-    return kpi(h ? `${h}h ${m}m` : `${m}m`, "SHIFT LEFT", sub, "kpi-dark");
+    return kpi(h ? `${h}h ${m}m` : `${m}m`, esc(s.label) + " LEFT", sub, "kpi-dark");
   }
 
   // size: "big" (4 cells or fewer), "mid" (5-7 cells, one row) or "" (two rows).
