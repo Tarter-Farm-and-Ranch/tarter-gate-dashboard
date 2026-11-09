@@ -81,7 +81,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .tiles { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
 .tiles .card { display: flex; flex-direction: column; padding: 10px 14px 10px; min-width: 0; overflow: hidden; }
 .c-top { display: flex; align-items: baseline; min-width: 0; }
-.c-name { font-size: 25px; font-weight: 900; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-name { font-size: var(--cn, 25px); line-height: 1.05; font-weight: 900; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .c-saved { font-size: 11px; font-weight: 800; color: #64748B; letter-spacing: .06em; white-space: nowrap; }
 .few .c-saved { font-size: 17px; }
 .c-rg { font-size: 11px; font-weight: 800; color: #94A3B8; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -127,7 +127,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 
 /* a few big cards (rollout: TK1 and TK2) */
 .few .tiles .card { padding: 18px 24px 16px; }
-.few .c-name { font-size: 46px; }
+
 .few .c-rg { font-size: 16px; }
 .few .c-meta { margin: 6px 0 12px; }
 .few .pill { font-size: 24px; padding: 4px 14px; }
@@ -139,7 +139,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .few .h-v span { font-size: 34px; }
 .few .h-v em { font-size: 14px; }
 .few .track { height: 14px; }
-.few .rings { justify-content: space-around; margin: 14px 0 12px; }
+.few .rings { justify-content: space-around; margin: 8px 0 8px; }
 .few .rc { gap: 14px; }
 .few .rl { font-size: 18px; }
 .few .duo { gap: 14px; }
@@ -155,7 +155,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); f
 .few .legend .lg-h { font-size: 15px; }
 /* one row of 5-7 medium cards */
 .mid .tiles .card { padding: 14px 16px 12px; }
-.mid .c-name { font-size: 32px; }
+
 .mid .c-rg, .mid .c-saved { font-size: 13px; }
 .mid .pill { font-size: 19px; }
 .mid .chip { font-size: 13px; padding: 3px 7px; }

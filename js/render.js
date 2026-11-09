@@ -87,7 +87,7 @@ var Gate = Gate || {};
   function tile(t, view, size) {
     const m = t.m;
     const big = size === "big", mid = size === "mid";
-    const rs = big ? 112 : mid ? 96 : 66;
+    const rs = big ? 104 : mid ? 96 : 66;
     if (!t.hasFile || !m) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -122,7 +122,7 @@ var Gate = Gate || {};
     <div class="grow"></div>
     ${big ? histStrip(t, 6) : mid ? histStrip(t, 4) : ""}
     ${notes.slice(0, big || mid ? 2 : 1).join("")}
-    ${big || mid ? "" : `<div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>`}
+    ${big || mid || m.noStd.length ? "" : `<div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>`}
   </div>`;
   }
 
@@ -182,13 +182,15 @@ var Gate = Gate || {};
       const vals = view.tiles.filter((t) => cells.indexOf(t.name) >= 0 && t.m && has(t.m.eff)).map((t) => Math.min(t.m.eff, 150));
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
     };
+    // Cell names: big with few cards across, smaller as more cards share the row.
+    const nameSize = (across) => ({ 1: 80, 2: 70, 3: 60, 4: 52, 5: 42, 6: 36, 7: 32 })[across] || 26;
     const oneRow = (size) => {
       // One row: no legend card (it left a mostly empty column); the colors go in a line
       // at the end of the area titles.
       const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr))`;
       const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("");
       const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, size)).join("");
-      return `<section class="arow ${size === "big" ? "few" : "mid"}"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
+      return `<section class="arow ${size === "big" ? "few" : "mid"}" style="--cn:${nameSize(shownCount)}px"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
     };
     // 8 cells or more: two rows, the cells split evenly (10 -> 5 + 5, 13 -> 7 + 6), so no
     // row ends with holes. An area that runs across both rows gets its band in each.
@@ -212,7 +214,7 @@ var Gate = Gate || {};
         }).join("") + (gap ? `<div style="grid-column:span ${gap}"></div>` : "");
         const tiles = row.map((it) => tile(view.tiles.find((t) => t.name === it.cell), view)).join("") + (gap ? legend : "");
         const style = `grid-template-columns:repeat(${cols}, minmax(0, 1fr))`;
-        return `<section class="arow"><div class="bands" style="${style}">${bands}</div><div class="tiles" style="${style}">${tiles}</div></section>`;
+        return `<section class="arow" style="--cn:${nameSize(cols)}px"><div class="bands" style="${style}">${bands}</div><div class="tiles" style="${style}">${tiles}</div></section>`;
       }).join("");
     };
     const rowsHtml = few ? oneRow("big") : mid ? oneRow("mid") : twoRows();
