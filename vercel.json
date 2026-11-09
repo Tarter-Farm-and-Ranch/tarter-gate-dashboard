@@ -1,10 +1,10 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/tv", "destination": "/index.html?tv=1" },
-    { "source": "/tv/:cell", "destination": "/index.html?tv=1&cell=:cell" },
-    { "source": "/preview", "destination": "/index.html?preview=1" },
-    { "source": "/preview/:cell", "destination": "/index.html?preview=1&cell=:cell" }
+    { "source": "/tv", "destination": "/" },
+    { "source": "/tv/:cell", "destination": "/" },
+    { "source": "/preview", "destination": "/" },
+    { "source": "/preview/:cell", "destination": "/" }
   ],
   "headers": [
     {
