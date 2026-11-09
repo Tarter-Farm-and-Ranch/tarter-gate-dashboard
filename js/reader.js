@@ -348,7 +348,11 @@ var Gate = Gate || {};
     const newestFirst = (a, b) => (b.modified || 0) - (a.modified || 0);
     const warnings = [];
 
-    const std = usable.filter((f) => base(f.name).toLowerCase() === G.PLANT.standardsFile.toLowerCase()).sort(newestFirst)[0];
+    // The standards and settings files are found by name even when a download or a copy added
+    // " 1", " (1)" or " - Copy" to it (the newest one wins); lock files (~$) never count.
+    const looseName = (n) => base(n).toLowerCase().replace(/\.xlsx$/, "").replace(/(\s*-\s*copy|\s*\(\d+\)|\s*\d+)+$/, "").trim();
+    const byLooseName = (want) => files.filter((f) => /\.xlsx$/i.test(base(f.name)) && !/^~\$/.test(base(f.name)) && looseName(f.name) === want.toLowerCase().replace(/\.xlsx$/, "")).sort(newestFirst)[0];
+    const std = byLooseName(G.PLANT.standardsFile);
     if (!std) {
       cache.standards = null;
       cache.standardsSig = "";
@@ -365,7 +369,7 @@ var Gate = Gate || {};
 
     // Which cells are on the screen: Dashboard Settings.xlsx when it's in the folder.
     const settingsName = (G.PLANT.settingsFile || "").toLowerCase();
-    const set = settingsName ? usable.filter((f) => base(f.name).toLowerCase() === settingsName).sort(newestFirst)[0] : null;
+    const set = settingsName ? byLooseName(settingsName) : null;
     if (!set) {
       cache.settings = null;
       cache.settingsSig = "";

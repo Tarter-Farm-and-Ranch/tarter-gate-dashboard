@@ -149,7 +149,6 @@ var Gate = Gate || {};
     </div>
     <div class="duo${big ? " trio3" : ""}"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div>${big ? `<div class="mini ${m.downtime ? "m-amber" : ""}"><div class="ml">DOWNTIME</div><div class="mv">${int(m.downtime)}<small>min</small></div></div>` : ""}</div>
     ${notes.length || big ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
-    ${big ? paceRow(m, view) : ""}
     ${big || mid ? partsList(t.block, view, mid) : ""}
     <div class="grow"></div>
     ${commentsBox}

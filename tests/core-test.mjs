@@ -133,6 +133,7 @@ XLSX.utils.book_append_sheet(setWb, XLSX.utils.aoa_to_sheet([
 setWb.Sheets.Cells.D3 = { t: "s", v: "EXPECTED OPERATORS" }; setWb.Sheets.Cells.D4 = { t: "n", v: 2 }; setWb.Sheets.Cells["!ref"] = "A1:D9";
 XLSX.utils.book_append_sheet(setWb, XLSX.utils.aoa_to_sheet([["SAFETY"], ["Last recordable", 46157], ["Today's topic", "Ladder Safety"]]), "Safety");
 const settings = G.readSettings(open(setWb));
+function offWbPlaceholder() { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet([["x"]]), "x"); return w; }
 assert.deepEqual(settings.expected, { TK1: 2 }, "EXPECTED OPERATORS per cell");
 assert.deepEqual(settings.safety, { lastRecordable: "2026-05-15", topic: "Ladder Safety" }, "Safety tab: date (Excel serial) and topic");
 assert.deepEqual([...settings.showCells], ["TK1", "TK2", "E-Coat"], "YES / Y, any case; NO and blank are off");
@@ -143,6 +144,10 @@ assert.ok(r.warnings.some((w) => /"Laser 9" isn't a cell/.test(w)));
 const v2 = G.buildView(r.data, new Date("2026-11-09T15:42:00Z"));
 assert.equal(v2.plant.cellsShown, 3, "the settings file decides the screen");
 assert.deepEqual(v2.shownAreas.map((a) => a.name), ["WELD", "FINISH"]);
+r = await G.collect([files[1], file("Dashboard Settings 1.xlsx", setWb)], {}, now);
+assert.deepEqual([...r.data.showCells], ["TK1", "TK2", "E-Coat"], "a download that became 'Dashboard Settings 1.xlsx' still counts");
+r = await G.collect([files[1], file("Dashboard Settings (1).xlsx", setWb), file("~$Dashboard Settings.xlsx", offWbPlaceholder())], {}, now);
+assert.deepEqual([...r.data.showCells], ["TK1", "TK2", "E-Coat"], "'(1)' copy counts, lock file doesn't");
 r = await G.collect([files[1]], {}, now);
 assert.equal(r.data.showCells, null, "no settings file: PLANT.showCells");
 const offWb = XLSX.utils.book_new();
