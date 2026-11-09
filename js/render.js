@@ -63,6 +63,7 @@ var Gate = Gate || {};
     <div class="sep"></div>
     <div class="titles"><div class="t1">${esc(titles.top)}</div><div class="t2">${esc(titles.bottom)}</div></div>
     <div class="grow"></div>
+    ${opts.legend || ""}
     ${opts.sample ? '<div class="chip-sample">SAMPLE DATA · PREVIEW</div>' : ""}
     ${shiftBlock}
     <div class="clock"><div class="c1" data-clock>${esc(c.time)}</div><div class="c2" data-date>${esc(c.date)}</div></div>
@@ -77,7 +78,7 @@ var Gate = Gate || {};
     const s = view.shift;
     const name = s.shift === "wknd" ? "Weekend" : s.shift + " shift";
     if (!s.running) return kpi("ENDED", "LAST SHIFT", name + " · " + hhmm(s.start) + " – " + hhmm(s.start + s.minutes), "kpi-dark");
-    const sub = name + " · ends " + hhmm(s.start + s.minutes);
+    const sub = name + "<br>ends " + hhmm(s.start + s.minutes);
     const h = Math.floor(s.minutesLeft / 60), m = Math.round(s.minutesLeft % 60);
     return kpi(h ? `${h}h ${m}m` : `${m}m`, "SHIFT LEFT", sub, "kpi-dark");
   }
@@ -86,7 +87,7 @@ var Gate = Gate || {};
   function tile(t, view, size) {
     const m = t.m;
     const big = size === "big", mid = size === "mid";
-    const rs = big ? 130 : mid ? 96 : 66;
+    const rs = big ? 112 : mid ? 96 : 66;
     if (!t.hasFile || !m) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -119,15 +120,24 @@ var Gate = Gate || {};
     ${notes.length ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
     ${big || mid ? partsList(t.block, view, mid) : ""}
     <div class="grow"></div>
+    ${big ? histStrip(t, 6) : mid ? histStrip(t, 4) : ""}
     ${notes.slice(0, big || mid ? 2 : 1).join("")}
-    <div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>
+    ${big || mid ? "" : `<div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>`}
   </div>`;
   }
 
   /** Big cards (few cells on screen): the parts this shift, schedule first. */
+  /** Big and medium cards: the cell's last shifts, % to goal, as compact chips ("now" last). */
+  function histStrip(t, count) {
+    const h = t.history.slice(-count);
+    if (h.length < 2) return "";
+    const chips = h.map((x) => `<span class="hc${x.now ? " hc-now" : ""}"><em>${x.now ? "NOW" : esc(x.day + " " + x.shift)}</em><b class="t-${band(x.eff)}">${x.eff}%</b></span>`).join("");
+    return `<div class="hstrip"><div class="pl-h"><span>LAST SHIFTS · TO GOAL</span></div><div class="hchips">${chips}</div></div>`;
+  }
+
   // Parts without a standard are counted in the red note, not listed, so a long list of
   // them can't push the card off the screen; the rest are cut at what fits, with "+N more".
-  const BIG_CARD_PARTS = 5;
+  const BIG_CARD_PARTS = 4;
   const MID_CARD_PARTS = 6;
   function partsList(block, view, compact) {
     const all = block ? block.parts.filter((p) => p.std > 0 && p.crew > 0) : [];
@@ -168,15 +178,17 @@ var Gate = Gate || {};
       <div class="lg-k"><i class="bg-on"></i>${PLANT.bands.on}%+ ON PACE</div>
       <div class="lg-k"><i class="bg-behind"></i>${PLANT.bands.behind}–${PLANT.bands.on - 1}% BEHIND PACE</div>
       <div class="lg-k"><i class="bg-off"></i>UNDER ${PLANT.bands.behind}% OFF PACE</div></div>`;
+    const inlineLegend = `<span class="lg-inline"><i class="bg-on"></i>${PLANT.bands.on}%+ on pace<i class="bg-behind"></i>${PLANT.bands.behind}–${PLANT.bands.on - 1}% behind<i class="bg-off"></i>under ${PLANT.bands.behind}% off pace</span>`;
     const areaAvg = (cells) => {
       const vals = view.tiles.filter((t) => cells.indexOf(t.name) >= 0 && t.m && has(t.m.eff)).map((t) => Math.min(t.m.eff, 150));
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
     };
     const oneRow = (size) => {
-      const withLegend = shownCount < 7;
-      const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr))${withLegend ? (size === "big" ? " 320px" : " 280px") : ""}`;
-      const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("") + (withLegend ? "<div></div>" : "");
-      const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, size)).join("") + (withLegend ? legend : "");
+      // One row: no legend card (it left a mostly empty column); the colors go in a line
+      // at the end of the area titles.
+      const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr))`;
+      const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("");
+      const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, size)).join("");
       return `<section class="arow ${size === "big" ? "few" : "mid"}"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
     };
     // 8 cells or more: two rows, the cells split evenly (10 -> 5 + 5, 13 -> 7 + 6), so no
@@ -207,7 +219,7 @@ var Gate = Gate || {};
     const rowsHtml = few ? oneRow("big") : mid ? oneRow("mid") : twoRows();
     const effBand = band(p.eff);
     const total = p.cellsShown;
-    const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL", `Earned ÷ paid hours · ${p.cellsWithData} of ${total} cells`)
+    const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL", `${p.cellsWithData} of ${total} cells reporting`)
       + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE", `Avg done · ${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
       + kpi(int(p.ops), "OPERATORS", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
       + kpi(`<span class="${p.downtime ? "t-behind" : ""}">${int(p.downtime)}</span><small>min</small>`, "DOWNTIME", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
@@ -215,7 +227,7 @@ var Gate = Gate || {};
         ? kpi(`<span class="t-off">${p.noStd}</span>`, "NO STANDARD", esc(p.noStdCells.join(", ")) + " · add in Epicor", "kpi-red")
         : kpi(`<span class="t-on">✓</span>`, "STANDARDS", "Every part has a standard"))
       + shiftLeftKpi(view);
-    return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, opts)}
+    return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION · " + PLANT.name.toUpperCase() + " (" + PLANT.code + ")" }, Object.assign({ legend: few || mid ? inlineLegend : "" }, opts))}
   <main class="plant"><div class="kpis">${kpis}</div>${rowsHtml}</main>${opts.alert ? `<div class="alert">${esc(opts.alert)}</div>` : ""}</div>`;
   };
 
