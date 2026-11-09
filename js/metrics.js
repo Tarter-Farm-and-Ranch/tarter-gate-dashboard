@@ -129,14 +129,19 @@ var Gate = Gate || {};
     const hasData = (inst) => Object.keys(cells).some((n) => cells[n].weeks && cells[n].weeks[inst.monday] && cells[n].weeks[inst.monday][inst.key]);
     const shift = currentShift(clock, hasData);
     const tiles = [];
-    let earned = 0, paid = 0, ops = 0, downtime = 0, cellsWithData = 0;
+    let earned = 0, paid = 0, ops = 0, downtime = 0, cellsWithData = 0, shownCount = 0;
     const adh = [], noStdCells = [];
+    const shown = {};
+    for (const a of G.shownAreas()) for (const n of a.cells) shown[n] = true;
     for (const area of PLANT.areas) {
       for (const name of area.cells) {
         const c = cells[name];
         const block = c && c.weeks && c.weeks[shift.monday] ? c.weeks[shift.monday][shift.key] || null : null;
         const m = blockMetrics(block, shift.fraction);
-        tiles.push({ name, area: area.name, rg: c ? c.rg : "", hasFile: !!c, block, m, history: c ? history(c, shift) : [] });
+        tiles.push({ name, area: area.name, rg: c ? c.rg : "", hasFile: !!c, block, m, history: c ? history(c, shift) : [], shown: !!shown[name] });
+        // The plant numbers cover the cells on the all-cells screen.
+        if (!shown[name]) continue;
+        shownCount++;
         if (m && m.paid > 0) { earned += m.earned; paid += m.paid; }
         if (m) { cellsWithData++; ops += m.ops; downtime += m.downtime; if (m.adherence !== null) adh.push(m.adherence); }
         if (m && m.noStd.length) noStdCells.push(name);
@@ -147,8 +152,8 @@ var Gate = Gate || {};
       plant: {
         eff: paid > 0 ? Math.round(earned / paid * 100) : null,
         adherence: adh.length ? Math.round(adh.reduce((a, b) => a + b, 0) / adh.length) : null,
-        ops, downtime, noStdCells, cellsWithData,
-        noStd: tiles.reduce((t, x) => t + (x.m ? x.m.noStd.length : 0), 0)
+        ops, downtime, noStdCells, cellsWithData, cellsShown: shownCount,
+        noStd: tiles.reduce((t, x) => t + (x.shown && x.m ? x.m.noStd.length : 0), 0)
       }
     };
   }

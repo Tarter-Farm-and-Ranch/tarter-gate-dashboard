@@ -87,6 +87,11 @@ assert.ok(tk1.m.eff > 100, "480 pcs at 80/hr by 10:42 is ahead of pace");
 assert.equal(view.tiles.find((t) => t.name === "K9").hasFile, false);
 assert.equal(view.plant.noStd, 1);
 assert.equal(view.plant.cellsWithData, 1);
+assert.equal(view.plant.cellsShown, 2, "TK1 and TK2 on the plant screen (PLANT.showCells)");
+assert.equal(view.tiles.find((t) => t.name === "K9").shown, false);
+G.PLANT.showCells = [];
+assert.equal(G.buildView({ cells: { TK1: cell } }, new Date("2026-11-09T15:42:00Z")).plant.cellsShown, 13, "[] shows every cell");
+G.PLANT.showCells = ["TK1", "TK2"];
 
 // --- A whole folder: standards + cells, copies skipped, unchanged files not read again
 const book = (w) => XLSX.write(w, { type: "buffer", bookType: "xlsx" });

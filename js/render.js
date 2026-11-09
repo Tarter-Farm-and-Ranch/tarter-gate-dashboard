@@ -71,8 +71,9 @@ var Gate = Gate || {};
     return kpi(h ? `${h}h ${m}m` : `${m}m`, "SHIFT LEFT", sub, "kpi-dark");
   }
 
-  function tile(t, view) {
+  function tile(t, view, big) {
     const m = t.m;
+    const rs = big ? 130 : 66;
     if (!t.hasFile || !m) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -97,24 +98,45 @@ var Gate = Gate || {};
       <div class="track"><i class="bg-${b === "none" ? "none" : b} stripes" style="width:${uplhPct.toFixed(0)}%"></i></div>
     </div>
     <div class="rings">
-      <div class="rc">${ring(m.eff, 66, COLOR[b])}<div class="rl">TO<br>GOAL</div></div>
+      <div class="rc">${ring(m.eff, rs, COLOR[b])}<div class="rl">TO<br>GOAL</div></div>
       <div class="rdiv"></div>
-      <div class="rc">${ring(m.adherence, 66, COLOR[sb])}<div class="rl">SCHED.<br>DONE</div></div>
+      <div class="rc">${ring(m.adherence, rs, COLOR[sb])}<div class="rl">SCHED.<br>DONE</div></div>
     </div>
     <div class="duo"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div></div>
     ${notes.length ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
+    ${big ? partsList(t.block, view) : ""}
     <div class="grow"></div>
-    ${notes.slice(0, 1).join("")}
+    ${notes.slice(0, big ? 2 : 1).join("")}
     <div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>
   </div>`;
+  }
+
+  /** Big cards (few cells on screen): the parts this shift, schedule first. */
+  function partsList(block, view) {
+    const parts = block ? block.parts.slice(0, 8) : [];
+    if (!parts.length) return "";
+    const fraction = view.shift.running ? view.shift.fraction : 1;
+    const rows = parts.map((p) => {
+      const ok = p.std > 0 && p.crew > 0;
+      const done = p.forecast ? (p.actual || 0) / p.forecast : null;
+      const pb = done === null ? "none" : band(fraction ? Math.round(done / fraction * 100) : 0);
+      return `<div class="pl-row ${ok ? "" : "pl-red"}"><span class="pl-n">${esc(p.part)}</span><span class="pl-d">${esc(p.desc || (ok ? "" : "No standard in Epicor"))}</span>
+        <span class="pl-v">${p.actual === null ? "—" : int(p.actual)}<small>/ ${p.forecast === null ? "extra" : int(p.forecast)}</small></span>
+        <span class="ptrack"><i class="bg-${pb} stripes" style="width:${done === null ? 0 : Math.min(Math.round(done * 100), 100)}%"></i></span></div>`;
+    }).join("");
+    return `<div class="plist"><div class="pl-h"><span>PARTS THIS SHIFT</span><span>ACTUAL / FORECAST</span></div>${rows}</div>`;
   }
 
   G.renderPlant = function (view, now, opts) {
     opts = opts || {};
     const p = view.plant;
+    const shownAreas = G.shownAreas();
+    const shownCount = shownAreas.reduce((n, a) => n + a.cells.length, 0);
+    // A few cells (the rollout starts with TK1 and TK2): one row of big cards.
+    const few = shownCount <= 4;
     const rows = [];
     let row = [], used = 0;
-    for (const area of PLANT.areas) {
+    for (const area of shownAreas) {
       if (used + area.cells.length > 7) { rows.push(row); row = []; used = 0; }
       row.push(area); used += area.cells.length;
     }
@@ -132,7 +154,13 @@ var Gate = Gate || {};
       const vals = view.tiles.filter((t) => cells.indexOf(t.name) >= 0 && t.m && has(t.m.eff)).map((t) => Math.min(t.m.eff, 150));
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + "% to goal" : "no data yet";
     };
-    const rowsHtml = rows.map((areas, i) => {
+    const fewHtml = () => {
+      const cols = `grid-template-columns:repeat(${shownCount}, minmax(0, 1fr)) 320px`;
+      const bands = shownAreas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cell${a.cells.length > 1 ? "s" : ""} · ${areaAvg(a.cells)}</span></div>`).join("") + "<div></div>";
+      const tiles = shownAreas.reduce((all, a) => all.concat(a.cells), []).map((n) => tile(view.tiles.find((t) => t.name === n), view, true)).join("") + legend;
+      return `<section class="arow few"><div class="bands" style="${cols}">${bands}</div><div class="tiles" style="${cols}">${tiles}</div></section>`;
+    };
+    const rowsHtml = few ? fewHtml() : rows.map((areas, i) => {
       const count = areas.reduce((n, a) => n + a.cells.length, 0);
       const fill = i === rows.length - 1 && count < 7;
       const bands = areas.map((a) => `<div class="band" style="grid-column:span ${a.cells.length}"><b>${esc(a.name)}</b><span>${a.cells.length} cells · ${areaAvg(a.cells)}</span></div>`).join("")
@@ -141,11 +169,11 @@ var Gate = Gate || {};
       return `<section class="arow"><div class="bands">${bands}</div><div class="tiles">${tiles}</div></section>`;
     }).join("");
     const effBand = band(p.eff);
-    const total = view.tiles.length;
+    const total = p.cellsShown;
     const kpis = kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL", `Earned ÷ paid hours · ${p.cellsWithData} of ${total} cells`)
       + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE", `Avg done · ${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
-      + kpi(int(p.ops), "OPERATORS", "This shift · all cells")
-      + kpi(`<span class="${p.downtime ? "t-behind" : ""}">${int(p.downtime)}</span><small>min</small>`, "DOWNTIME", "This shift · all cells")
+      + kpi(int(p.ops), "OPERATORS", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
+      + kpi(`<span class="${p.downtime ? "t-behind" : ""}">${int(p.downtime)}</span><small>min</small>`, "DOWNTIME", "This shift · " + (few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : "all cells"))
       + (p.noStd
         ? kpi(`<span class="t-off">${p.noStd}</span>`, "NO STANDARD", esc(p.noStdCells.join(", ")) + " · add in Epicor", "kpi-red")
         : kpi(`<span class="t-on">✓</span>`, "STANDARDS", "Every part has a standard"))

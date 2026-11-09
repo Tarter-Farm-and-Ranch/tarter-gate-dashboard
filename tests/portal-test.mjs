@@ -90,7 +90,7 @@ try {
   const tk1Card = page.locator(".tiles .card", { hasText: "TK1" });
   assert.match(await tk1Card.textContent(), /57%/, "240 pcs at 80/hr, 1 operator, 5.25 h -> 57%");
   assert.match(await tk1Card.textContent(), /NO STANDARD/);
-  assert.match(await page.locator(".tiles .card", { hasText: "E-Coat" }).textContent(), /UPLH THIS SHIFT/);
+  assert.equal(await page.locator(".tiles .card", { hasText: "E-Coat" }).count(), 0, "E-Coat isn't on the plant screen yet");
   assert.ok(requests.some((p) => p.endsWith("/_feed/files/tk1.json")));
   assert.ok(!requests.some((p) => p.endsWith("/lock.json")), "lock file never downloaded");
 

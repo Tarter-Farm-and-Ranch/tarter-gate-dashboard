@@ -27,6 +27,10 @@ Gate.PLANT = {
     { name: "FINISH", cells: ["E-Coat", "Powder Coat"] },
     { name: "ASSEMBLY", cells: ["Gate Line", "Feeder Shop", "Cattle", "Assembly"] }
   ],
+  // Cells on the all-cells screen while the rollout starts with TK1 and TK2 (Mike, 11/4).
+  // Add a cell's name here when it starts entering data; [] shows every cell above.
+  // Any cell can still be opened on its own with ?cell=<name>.
+  showCells: ["TK1", "TK2"],
   // % to goal color bands, same as West: 80%+ on pace, 60-79% behind, under 60% off pace.
   bands: { on: 80, behind: 60 }
 };
@@ -53,4 +57,13 @@ Gate.blockPosition = function (dayIndex, shift) {
 
 Gate.allCells = function () {
   return Gate.PLANT.areas.reduce(function (all, a) { return all.concat(a.cells); }, []);
+};
+
+/** The areas and cells on the all-cells screen (PLANT.showCells, or all of them). */
+Gate.shownAreas = function () {
+  var show = Gate.PLANT.showCells || [];
+  var lower = show.map(function (c) { return String(c).toLowerCase(); });
+  return Gate.PLANT.areas.map(function (a) {
+    return { name: a.name, cells: show.length ? a.cells.filter(function (c) { return lower.indexOf(c.toLowerCase()) >= 0; }) : a.cells.slice() };
+  }).filter(function (a) { return a.cells.length; });
 };

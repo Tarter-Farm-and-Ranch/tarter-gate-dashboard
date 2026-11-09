@@ -5,6 +5,9 @@ each work cell fills in during the shift. Same look as the West dashboard.
 
 - **All cells**: one card per work cell with % to goal, UPLH vs. goal, schedule done,
   actual vs. scheduled pieces, operators, downtime, and parts made without an Epicor standard.
+  While the rollout starts with TK1 and TK2, only the cells in `PLANT.showCells`
+  (`js/config.js`) are on this screen, as big cards with their parts; add a cell there when
+  it starts entering data (`[]` = every cell).
 - **One cell** (`?cell=TK1`): the cell's parts this shift with forecast, actual, standard
   and crew, plus its last shifts.
 - **Preview** (`?preview=1`, `?preview=1&cell=AWL1`): sample data, nothing read or published.
