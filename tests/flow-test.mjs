@@ -87,8 +87,8 @@ try {
     await post({ data: { cells: { TK1: many }, showCells: ["TK1", "TK2"] } });
     await page.goto(base + "/?tv=1");
     await page.waitForSelector(".plist");
-    assert.equal(await page.locator(".tiles .card").first().locator(".pl-row").count(), 4, "big card lists 4 parts");
-    assert.match(await page.textContent(".plist"), /\+4 more parts/);
+    assert.equal(await page.locator(".tiles .card").first().locator(".pl-row").count(), 3, "big card lists 3 parts");
+    assert.match(await page.textContent(".plist"), /\+5 more parts/);
     assert.match(await page.textContent(".tiles .card"), /6 PARTS · NO STANDARD/, "parts without a standard are counted, not listed");
     const cardBox = await page.locator(".tiles .card").first().boundingBox();
     assert.ok(cardBox.y + cardBox.height <= 1080, "the card stays on the screen");

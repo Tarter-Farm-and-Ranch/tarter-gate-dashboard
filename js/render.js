@@ -100,7 +100,7 @@ var Gate = Gate || {};
     const notes = [];
     if (m.noStd.length) notes.push(`<div class="note n-red"><b>${big || mid ? m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "") + " · NO STANDARD" : "NO STD · " + m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "")}</b><span>for ${esc(t.rg)} · add in Epicor</span></div>`);
     if (!m.ops) notes.push(`<div class="note n-amber"><b>ENTER # OF OPERATORS</b><span>to get % to goal</span></div>`);
-    else if (m.downtime) notes.push(`<div class="note n-amber"><b>DOWNTIME · ${int(m.downtime)} MIN</b></div>`);
+    else if (m.downtime && !(big && m.forecast)) notes.push(`<div class="note n-amber"><b>DOWNTIME · ${int(m.downtime)} MIN</b></div>`);
     const extra = m.made - m.schedMade;
     return `<div class="card tb-${b}">
     <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
@@ -117,9 +117,10 @@ var Gate = Gate || {};
     </div>
     <div class="duo"><div class="mini"><div class="ml">ACTUAL</div><div class="mv">${int(m.schedMade)}</div></div><div class="mini"><div class="ml">SCHEDULED</div><div class="mv">${int(m.forecast)}</div></div></div>
     ${notes.length ? "" : `<div class="c-sub">${extra > 0 ? "+" + int(extra) + " pcs not on schedule" : ""}</div>`}
+    ${big ? paceRow(m, view) : ""}
     ${big || mid ? partsList(t.block, view, mid) : ""}
     <div class="grow"></div>
-    ${big ? histStrip(t, 6) : mid ? histStrip(t, 4) : ""}
+    ${mid ? histStrip(t, 4) : ""}
     ${notes.slice(0, big || mid ? 2 : 1).join("")}
     ${big || mid || m.noStd.length ? "" : `<div class="c-last">${prev ? "Last shift " + esc(prev.day + " " + prev.shift) + ": <b class=\"t-" + band(prev.eff) + "\">" + prev.eff + "%</b>" : "&nbsp;"}</div>`}
   </div>`;
@@ -134,9 +135,31 @@ var Gate = Gate || {};
     return `<div class="hstrip"><div class="pl-h"><span>LAST SHIFTS · TO GOAL</span></div><div class="hchips">${chips}</div></div>`;
   }
 
+  /**
+   * Big cards: where the shift is heading. At this pace = scheduled pieces made ÷ part of
+   * the shift worked; needed /hr = pieces still to make ÷ hours left.
+   */
+  function paceRow(m, view) {
+    const s = view.shift;
+    if (!m || !m.forecast) return "";
+    const left = Math.max(0, m.forecast - m.schedMade);
+    let proj = "--", projB = "none", need = "--", needSub = "";
+    if (!s.running) { proj = int(m.schedMade); projB = band(m.adherence); need = left ? int(left) : "✓"; needSub = left ? "pcs short" : "schedule met"; }
+    else {
+      if (s.fraction > 0.05) { const p = Math.round(m.schedMade / s.fraction); proj = int(p); projB = band(Math.round(p / m.forecast * 100)); }
+      if (!left) { need = "✓"; needSub = "schedule met"; }
+      else if (s.minutesLeft > 0) { need = int(Math.ceil(left / (s.minutesLeft / 60))); needSub = int(left) + " pcs to go"; }
+    }
+    return `<div class="pace">
+      <div class="pc"><div class="ml">${s.running ? "AT THIS PACE" : "SHIFT ENDED AT"}</div><div class="mv t-${projB}">${proj}<small>/ ${int(m.forecast)}</small></div><div class="ps">${s.running ? "by " + hhmm(s.start + s.minutes) : "scheduled pieces"}</div></div>
+      <div class="pc"><div class="ml">${s.running ? "NEEDED / HR" : "LEFT"}</div><div class="mv">${need}</div><div class="ps">${needSub}</div></div>
+      <div class="pc"><div class="ml">DOWNTIME</div><div class="mv ${m.downtime ? "t-behind" : ""}">${int(m.downtime)}<small>min</small></div><div class="ps">this shift</div></div>
+    </div>`;
+  }
+
   // Parts without a standard are counted in the red note, not listed, so a long list of
   // them can't push the card off the screen; the rest are cut at what fits, with "+N more".
-  const BIG_CARD_PARTS = 4;
+  const BIG_CARD_PARTS = 3;
   const MID_CARD_PARTS = 6;
   function partsList(block, view, compact) {
     const all = block ? block.parts.filter((p) => p.std > 0 && p.crew > 0) : [];
