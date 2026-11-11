@@ -7,7 +7,7 @@ jobs:
   test:
     # Pinned: Playwright 1.56 has no Chromium build for ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,6 +16,10 @@ jobs:
       - name: Install Playwright + Chromium
         run: |
           npm install --no-save playwright@1.56
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
+          # Chromium's system libraries and fonts come from apt, which the runner sometimes
+          # can't reach. Try twice and go on without them: the runner image already has
+          # what Chromium needs and the page ships its own font, so the tests decide.
+          for i in 1 2; do timeout 300 npx playwright install-deps chromium && break; sleep 15; done
       - name: Run tests
         run: npm test
