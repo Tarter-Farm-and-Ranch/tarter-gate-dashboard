@@ -36,7 +36,7 @@ SharePoint "Production Reporting" folder
         │  snapshot.json: the portal runs js/config.js, reader.js, portal.js, snapshot.js
         │  and calls buildGateSnapshot(manifest, previous) -> _feed/snapshot.json (a few KB)
         ▼
-  every TV: reads the manifest every 30 s, then the snapshot when it changes
+  every TV: reads the manifest every 15 s, then the snapshot when it changes
 ```
 
 - If the portal doesn't build the snapshot, the page reads the workbooks from the feed
