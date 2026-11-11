@@ -117,6 +117,24 @@ try {
   await page.waitForFunction(() => window.msgs.length > 0);
   assert.match((await page.evaluate(() => window.msgs))[0].tvUpdated, /^Updated 11:14 AM$/);
   assert.match(await page.frames()[1].textContent(".bigring"), /57%/, "?cell= works inside the frame");
+
+  // 5. The portal stopped checking the files (over 3 minutes): same numbers, "data not updating".
+  writeManifest(Object.assign({}, manifest, { snapshot: { url: "snapshot.json?etag=s1" }, checkedAt: "2026-11-09T16:10:00Z" }));
+  await page.goto(base);
+  await page.waitForSelector(".alert");
+  assert.match(await page.textContent(".alert"), /DATA NOT UPDATING · LAST READ 11:10 AM/);
+  assert.match(await page.locator(".tiles .card", { hasText: "TK1" }).textContent(), /57%/);
+
+  // 6. A TV (?tv=1) that got no feed when it opened finds it on a later check.
+  const manifestFile = path.join(feed, "manifest.json");
+  const manifestText = fs.readFileSync(manifestFile, "utf8");
+  fs.rmSync(manifestFile);
+  await page.goto(base + "?tv=1");
+  await page.waitForSelector(".waiting");
+  fs.writeFileSync(manifestFile, manifestText.replace("2026-11-09T16:10:00Z", new Date(await page.evaluate(() => Date.now())).toISOString()));
+  await page.clock.runFor(16000);
+  await page.waitForSelector(".tiles .card");
+  assert.match(await page.locator(".tiles .card", { hasText: "TK1" }).textContent(), /57%/, "late portal feed found");
   assert.deepEqual(errors, []);
 } finally {
   await browser.close();

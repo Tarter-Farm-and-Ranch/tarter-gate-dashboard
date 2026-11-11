@@ -12,7 +12,7 @@
   const params = new URLSearchParams(location.search);
   const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
   const CELL = params.get("cell") || hash.get("cell") || null;
-  const SOURCE_CHECK_MS = 10e3, TV_CHECK_MS = 15e3, PORTAL_CHECK_MS = 30e3, HEARTBEAT_MS = 60e3;
+  const SOURCE_CHECK_MS = 10e3, TV_CHECK_MS = 15e3, PORTAL_CHECK_MS = 15e3, PORTAL_STALE_MS = 3 * 60e3, HEARTBEAT_MS = 60e3;
 
   let MODE = params.get("preview") === "1" ? "preview" : params.get("tv") === "1" ? "tv" : "source";
   const state = { data: null, alert: "", lastOkFetch: Date.now(), status: "", offsetMs: 0, connecting: true };
@@ -129,13 +129,16 @@
       }
     }
     const checked = Date.parse(manifest.checkedAt);
-    const stale = Number.isFinite(checked) && now().getTime() - checked > 15 * 60e3;
-    const issue = problem || (sourceError ? "CAN'T READ THE EXCEL FILES: " + sourceError.replace(/^Can't read the Excel files:\s*/i, "") : "") || (stale ? "THE PORTAL HASN'T READ THE FILES SINCE " + timeText(checked) : "");
+    // The portal's rule: a feed not checked for over 3 minutes is "data not updating"
+    // (the last numbers stay on the screen).
+    const stale = Number.isFinite(checked) && now().getTime() - checked > PORTAL_STALE_MS;
+    const issue = problem || (sourceError ? "CAN'T READ THE EXCEL FILES: " + sourceError.replace(/^Can't read the Excel files:\s*/i, "") : "") || (stale ? "DATA NOT UPDATING · LAST READ " + timeText(checked) : "");
     state.alert = issue ? issue + (Number.isFinite(checked) && !stale ? " · DATA FROM " + timeText(checked) : "") : "";
     tellPortal(issue ? "Problem: " + issue.toLowerCase() : "Updated " + timeText(Number.isFinite(checked) ? checked : now().getTime()));
   }
   // The portal's TV bar shows a status line the page posts to it.
   function tellPortal(text) {
+    text = String(text).slice(0, 60); // the TV bar takes 60 characters at most
     if (MODE !== "portal" || text === portal.lastText) return;
     portal.lastText = text;
     try { if (window.parent && window.parent !== window) window.parent.postMessage({ tvUpdated: text }, "*"); } catch (err) {}
@@ -281,8 +284,23 @@
     if (el && state.status) { el.textContent = state.status; el.title = state.status; }
   }
 
+  // A page that got no answer from the portal's feed when it opened (a slow first reply)
+  // keeps looking for it while it has nothing to show, instead of staying on "waiting".
+  async function findPortalLate() {
+    if (state.data || !(MODE === "tv" || (MODE === "source" && !source.dir))) return null;
+    const manifest = await probePortal();
+    if (!manifest) return null;
+    document.body.classList.remove("mode-" + MODE);
+    MODE = "portal";
+    document.body.classList.add("mode-portal");
+    $("bar").hidden = true;
+    watchForNewVersion();
+    return manifest;
+  }
+
   async function tick(first) {
     try {
+      if (!first) first = await findPortalLate();
       if (MODE === "portal") await pullPortal(first);
       else if (MODE === "tv") await pullFeed();
       else if (MODE === "source") await readFolder();
@@ -309,7 +327,10 @@
     }
     return text;
   }
+  let watching = false;
   async function watchForNewVersion() {
+    if (watching) return;
+    watching = true;
     let first;
     try { first = await pageText(); } catch (err) { return; }
     setInterval(async () => {
