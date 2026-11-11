@@ -104,39 +104,26 @@ var Gate = Gate || {};
     return kpi(h ? `${h}h ${m}m` : `${m}m`, esc(s.label) + " LEFT", sub, "kpi-dark");
   }
 
-  /** Greyed summary of the last shift with data, for a card whose current shift is still empty. */
-  function lastShiftBox(ls, size) {
-    const m = ls.m;
-    const small = size !== "big" && size !== "mid";
-    return `<div class="lastbox">
-      <div class="lb-h">LAST SHIFT · ${esc(ls.day + " " + ls.shift)}</div>
-      <div class="lb-row"><div><em>PIECES</em><b>${int(m.schedMade)}<small>/ ${int(m.forecast)}</small></b></div>
-      ${small ? "" : `<div><em>SCHED.</em><b>${m.adherence === null ? "--" : m.adherence + "%"}</b></div>`}
-      <div><em>TO GOAL</em><b>${m.eff === null ? "--" : m.eff + "%"}</b></div>
-      ${small ? "" : `<div><em>UPLH</em><b>${m.uplh === null ? "--" : m.uplh.toFixed(1)}</b></div>`}</div>
-      ${m.eff === null && m.made > 0 ? '<div class="lb-note"># of operators was blank</div>' : ""}
-    </div>`;
-  }
-
   // size: "big" (4 cells or fewer), "mid" (5-7 cells, one row) or "" (two rows).
   function tile(t, view, size) {
-    const m = t.m;
     const big = size === "big", mid = size === "mid";
     const rs = big ? 92 : mid ? 96 : 66;
-    if (!t.hasFile || !m) {
+    if (!t.hasFile) {
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
-      <div class="c-meta"><span class="c-rg">${esc(t.rg)}</span>${saved(t, view.now)}</div>
-      <div class="c-empty"><b>${t.hasFile ? "NOTHING ENTERED YET" : "NO FILE YET"}</b><span>${t.hasFile ? "for " + esc(view.shift.label.toLowerCase()) + (view.shift.running ? " today" : "") : "No " + esc(t.name) + " workbook in the folder"}</span></div>
-      ${t.lastShift ? lastShiftBox(t.lastShift, size) : ""}</div>`;
+      <div class="c-meta"><span class="c-rg">${esc(t.rg)}</span></div>
+      <div class="c-empty"><b>NO FILE YET</b><span>No ${esc(t.name)} workbook in the folder</span></div></div>`;
     }
-    const b = band(m.eff);
-    const sb = band(m.schedPace);
+    // Nothing entered yet for this shift: the normal card, with every number at zero (grey).
+    const empty = !t.m;
+    const m = t.m || { ops: 0, downtime: 0, made: 0, forecast: 0, schedMade: 0, eff: 0, uplh: 0, goal: null, adherence: 0, schedPace: 0, noStd: [] };
+    const b = empty ? "none" : band(m.eff);
+    const sb = empty ? "none" : band(m.schedPace);
     const uplhPct = has(m.uplh) && m.goal ? Math.min(100, m.uplh / m.goal * 100) : 0;
     const prev = t.history.filter((h) => !h.now).slice(-1)[0];
     const notes = [];
     if (m.noStd.length) notes.push(`<div class="note n-red"><b>${big || mid ? m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "") + " · NO STANDARD" : "NO STD · " + m.noStd.length + " PART" + (m.noStd.length > 1 ? "S" : "")}</b><span>for ${esc(t.rg)} · add in Epicor</span></div>`);
-    if (!m.ops) notes.push(`<div class="note n-amber"><b>ENTER # OF OPERATORS</b><span>to get % to goal</span></div>`);
+    if (!m.ops && !empty) notes.push(`<div class="note n-amber"><b>ENTER # OF OPERATORS</b><span>to get % to goal</span></div>`);
     else if (m.downtime && !big) notes.push(`<div class="note n-amber"><b>DOWNTIME · ${int(m.downtime)} MIN</b></div>`);
     const comments = t.block ? t.block.parts.filter((p) => p.comment) : [];
     let commentsBox = "";
@@ -294,9 +281,9 @@ var Gate = Gate || {};
     const withEff = view.tiles.filter((t) => t.shown && t.m && has(t.m.eff));
     const lowest = withEff.slice().sort((a, b) => a.m.eff - b.m.eff)[0];
     const cellsLine = few ? shownAreas.reduce((all, a) => all.concat(a.cells), []).join(", ") : p.cellsShown + " cells";
-    const kpis = safetyKpi(view, now) + kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : "--"}</span>`, "PLANT TO GOAL",
+    const kpis = safetyKpi(view, now) + kpi(`<span class="t-${effBand}">${has(p.eff) ? p.eff + "<small>%</small>" : p.cellsWithData ? "--" : "0<small>%</small>"}</span>`, "PLANT TO GOAL",
         `${p.cellsWithData} of ${total} cells reporting` + (lowest && withEff.length > 1 ? `<br>Lowest: ${esc(lowest.name)} <b class="t-${band(lowest.m.eff)}">${lowest.m.eff}%</b>` : ""))
-      + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : "--", "SCHEDULE DONE", `Avg of ${cellsLine}<br>${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
+      + kpi(has(p.adherence) ? p.adherence + "<small>%</small>" : p.cellsWithData ? "--" : "0<small>%</small>", "SCHEDULE DONE", `Avg of ${cellsLine}<br>${view.shift.running ? Math.round(view.shift.fraction * 100) : 100}% expected by now`)
       + personnelKpi(view, cellsLine)
       + shiftLeftKpi(view);
     return `<div class="screen">${header(view, now, { top: "SMART PRODUCTION CENTER", bottom: "DAILY PRODUCTION DASHBOARD · " + PLANT.name.toUpperCase().replace(/^TARTER /, "") }, opts)}

@@ -101,17 +101,17 @@ try {
     assert.equal(await page.locator(".prow").count(), 10, "cell screen table capped");
     assert.match(await page.textContent(".parts"), /\+4 more parts in the workbook/);
     assert.match(await page.textContent(".parts"), /6 PARTS WITH NO LRC2 STANDARD[\s\S]*and 2 more/);
-    // Wednesday 1st shift with nothing entered yet: the card shows Tuesday's numbers, greyed.
+    // Wednesday 1st shift with nothing entered yet: the normal card, every number at zero.
     const wedNoData = JSON.parse(JSON.stringify(cell));
     wedNoData.weeks["2026-11-09"] = { "1-1st": { ops: null, hours: 10.5, downtime: null, parts: [{ part: "1002767", desc: "", forecast: 576, actual: 530, std: 80, crew: 1, sched: true }] } };
     await post({ data: { cells: { TK1: wedNoData }, showCells: ["TK1", "TK2"] } });
     await page.clock.setFixedTime(new Date("2026-11-11T15:00:00Z"));
     await page.goto(base + "/?tv=1");
-    await page.waitForSelector(".lastbox");
-    const lb = await page.textContent(".lastbox");
-    assert.match(lb, /LAST SHIFT · TUE 1ST[\s\S]*530[\s\S]*576/, "empty shift shows the last one with data: " + lb);
-    assert.match(lb, /# of operators was blank/);
-    assert.match(await page.textContent(".tiles .card"), /NOTHING ENTERED YET/);
+    await page.waitForSelector(".tiles .card .rings");
+    const zero = await page.textContent(".tiles .card");
+    assert.doesNotMatch(zero, /NOTHING ENTERED YET|ENTER # OF OPERATORS|530/, "empty shift: no message, no last shift: " + zero);
+    assert.match(zero, /0%[\s\S]*0%[\s\S]*ACTUAL\s*0[\s\S]*SCHEDULED\s*0/, "empty shift shows zeros: " + zero);
+    assert.equal(await page.locator(".tiles .card.tb-none").count(), 2, "zero cards stay grey, not red");
     await page.goto(base + "/");
     await page.waitForSelector("#bar:not([hidden])");
     const bar = await page.locator("#bar").boundingBox();
