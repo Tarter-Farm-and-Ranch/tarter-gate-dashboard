@@ -118,11 +118,11 @@ try {
   assert.match((await page.evaluate(() => window.msgs))[0].tvUpdated, /^Updated 11:14 AM$/);
   assert.match(await page.frames()[1].textContent(".bigring"), /57%/, "?cell= works inside the frame");
 
-  // 5. The portal stopped checking the files (over 3 minutes): same numbers, "data not updating".
+  // 5. An old checkedAt alone raises no banner (same as West): the portal's status decides.
   writeManifest(Object.assign({}, manifest, { snapshot: { url: "snapshot.json?etag=s1" }, checkedAt: "2026-11-09T16:10:00Z" }));
   await page.goto(base);
-  await page.waitForSelector(".alert");
-  assert.match(await page.textContent(".alert"), /DATA NOT UPDATING · LAST READ 11:10 AM/);
+  await page.waitForSelector(".tiles .card");
+  assert.equal(await page.locator(".alert").count(), 0);
   assert.match(await page.locator(".tiles .card", { hasText: "TK1" }).textContent(), /57%/);
 
   // 6. A TV (?tv=1) that got no feed when it opened finds it on a later check.

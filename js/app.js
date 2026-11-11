@@ -12,7 +12,7 @@
   const params = new URLSearchParams(location.search);
   const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
   const CELL = params.get("cell") || hash.get("cell") || null;
-  const SOURCE_CHECK_MS = 10e3, TV_CHECK_MS = 15e3, PORTAL_CHECK_MS = 15e3, PORTAL_STALE_MS = 3 * 60e3, HEARTBEAT_MS = 60e3;
+  const SOURCE_CHECK_MS = 10e3, TV_CHECK_MS = 15e3, PORTAL_CHECK_MS = 15e3, HEARTBEAT_MS = 60e3;
 
   let MODE = params.get("preview") === "1" ? "preview" : params.get("tv") === "1" ? "tv" : "source";
   const state = { data: null, alert: "", lastOkFetch: Date.now(), status: "", offsetMs: 0, connecting: true };
@@ -129,11 +129,10 @@
       }
     }
     const checked = Date.parse(manifest.checkedAt);
-    // The portal's rule: a feed not checked for over 3 minutes is "data not updating"
-    // (the last numbers stay on the screen).
-    const stale = Number.isFinite(checked) && now().getTime() - checked > PORTAL_STALE_MS;
-    const issue = problem || (sourceError ? "CAN'T READ THE EXCEL FILES: " + sourceError.replace(/^Can't read the Excel files:\s*/i, "") : "") || (stale ? "DATA NOT UPDATING · LAST READ " + timeText(checked) : "");
-    state.alert = issue ? issue + (Number.isFinite(checked) && !stale ? " · DATA FROM " + timeText(checked) : "") : "";
+    // Same rule as West's dashboard: the banner comes from the portal's own status (it
+    // says when it can't read the files), not from how long ago it last checked them.
+    const issue = problem || (sourceError ? "CAN'T READ THE EXCEL FILES: " + sourceError.replace(/^Can't read the Excel files:\s*/i, "") : "");
+    state.alert = issue ? issue + (Number.isFinite(checked) ? " · DATA FROM " + timeText(checked) : "") : "";
     tellPortal(issue ? "Problem: " + issue.toLowerCase() : "Updated " + timeText(Number.isFinite(checked) ? checked : now().getTime()));
   }
   // The portal's TV bar shows a status line the page posts to it.
