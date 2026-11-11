@@ -121,6 +121,23 @@ var Gate = Gate || {};
     return out.reverse();
   }
 
+  /** The most recent finished shift before `shift` that has anything entered (actuals or a forecast). */
+  function lastShiftWithData(cell, shift) {
+    for (let back = 0; back < 14; back++) {
+      const dayISO = G.addDays(shift.dayISO, -back);
+      const dayIndex = (shift.dayIndex - back + 70) % 7;
+      const week = cell.weeks && cell.weeks[G.mondayOf(dayISO)];
+      if (!week) continue;
+      for (const s of shiftsOn(dayIndex).slice().reverse()) {
+        if (back === 0 && (s === shift.shift || (s === "2nd" && shift.shift === "1st"))) continue;
+        const b = week[dayIndex + "-" + s];
+        if (!b || !b.parts.some((p) => p.actual !== null || p.forecast !== null)) continue;
+        return { day: DAYS[dayIndex], shift: s === "wknd" ? "WKND" : s.toUpperCase(), dayISO, m: blockMetrics(b, 1) };
+      }
+    }
+    return null;
+  }
+
   /** Everything the screens need, from the raw data and the current time. */
   function buildView(data, now) {
     now = now || new Date();
@@ -139,7 +156,7 @@ var Gate = Gate || {};
         const c = cells[name];
         const block = c && c.weeks && c.weeks[shift.monday] ? c.weeks[shift.monday][shift.key] || null : null;
         const m = blockMetrics(block, shift.fraction);
-        tiles.push({ name, area: area.name, rg: c ? c.rg : "", savedAt: c && c.savedAt ? c.savedAt : "", hasFile: !!c, block, m, history: c ? history(c, shift) : [], shown: !!shown[name] });
+        tiles.push({ name, area: area.name, rg: c ? c.rg : "", savedAt: c && c.savedAt ? c.savedAt : "", hasFile: !!c, block, m, history: c ? history(c, shift) : [], shown: !!shown[name], lastShift: c && !m ? lastShiftWithData(c, shift) : null });
         // The plant numbers cover the cells on the all-cells screen.
         if (!shown[name]) continue;
         shownCount++;

@@ -104,6 +104,20 @@ var Gate = Gate || {};
     return kpi(h ? `${h}h ${m}m` : `${m}m`, esc(s.label) + " LEFT", sub, "kpi-dark");
   }
 
+  /** Greyed summary of the last shift with data, for a card whose current shift is still empty. */
+  function lastShiftBox(ls, size) {
+    const m = ls.m;
+    const small = size !== "big" && size !== "mid";
+    return `<div class="lastbox">
+      <div class="lb-h">LAST SHIFT · ${esc(ls.day + " " + ls.shift)}</div>
+      <div class="lb-row"><div><em>PIECES</em><b>${int(m.schedMade)}<small>/ ${int(m.forecast)}</small></b></div>
+      ${small ? "" : `<div><em>SCHED.</em><b>${m.adherence === null ? "--" : m.adherence + "%"}</b></div>`}
+      <div><em>TO GOAL</em><b>${m.eff === null ? "--" : m.eff + "%"}</b></div>
+      ${small ? "" : `<div><em>UPLH</em><b>${m.uplh === null ? "--" : m.uplh.toFixed(1)}</b></div>`}</div>
+      ${m.eff === null && m.made > 0 ? '<div class="lb-note"># of operators was blank</div>' : ""}
+    </div>`;
+  }
+
   // size: "big" (4 cells or fewer), "mid" (5-7 cells, one row) or "" (two rows).
   function tile(t, view, size) {
     const m = t.m;
@@ -113,7 +127,8 @@ var Gate = Gate || {};
       return `<div class="card tb-none">
       <div class="c-top"><div class="c-name">${esc(t.name)}</div></div>
       <div class="c-meta"><span class="c-rg">${esc(t.rg)}</span>${saved(t, view.now)}</div>
-      <div class="c-empty"><b>${t.hasFile ? "NOTHING ENTERED" : "NO FILE YET"}</b><span>${t.hasFile ? "for " + esc(view.shift.label.toLowerCase()) : "No " + esc(t.name) + " workbook in the folder"}</span></div></div>`;
+      <div class="c-empty"><b>${t.hasFile ? "NOTHING ENTERED YET" : "NO FILE YET"}</b><span>${t.hasFile ? "for " + esc(view.shift.label.toLowerCase()) + (view.shift.running ? " today" : "") : "No " + esc(t.name) + " workbook in the folder"}</span></div>
+      ${t.lastShift ? lastShiftBox(t.lastShift, size) : ""}</div>`;
     }
     const b = band(m.eff);
     const sb = band(m.schedPace);
